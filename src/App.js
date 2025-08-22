@@ -111,6 +111,7 @@ const DevisList = ({ db, appId }) => {
             <table className="min-w-full bg-white border">
                 <thead className="bg-gray-100">
                     <tr>
+                        <th className="text-left py-3 px-4 font-semibold text-sm">Commercial</th>
                         <th className="text-left py-3 px-4 font-semibold text-sm">Client</th>
                         <th className="text-left py-3 px-4 font-semibold text-sm">Date Création</th>
                         <th className="text-left py-3 px-4 font-semibold text-sm">Montant TTC</th>
@@ -120,6 +121,7 @@ const DevisList = ({ db, appId }) => {
                 <tbody>
                     {quotes.map(quote => (
                         <tr key={quote.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4 font-medium">{quote.salesperson || 'N/A'}</td>
                             <td className="py-3 px-4">{quote.client.prenom} {quote.client.nom}</td>
                             <td className="py-3 px-4">{new Date(quote.createdAt.seconds * 1000).toLocaleDateString()}</td>
                             <td className="py-3 px-4">{quote.calculation?.oneTimeTotal?.toFixed(2) || 'N/A'} €</td>
@@ -359,4 +361,3 @@ export default function App() {
     </div>
   );
 }
-

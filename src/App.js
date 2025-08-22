@@ -26,7 +26,10 @@ const initialData = {
     platine: { name: 'Pack Platine', price: 1500, mensualite: 30 },
   },
   extraItems: [],
-  discounts: [],
+  discounts: [
+    { id: 'BIENVENUE50', code: 'BIENVENUE50', value: 50, active: true, type: 'materiel' },
+    { id: 'ABO5', code: 'ABO5', value: 5, active: true, type: 'abonnement' },
+  ],
   settings: {
       installationFee: 350,
       vat: {
@@ -158,7 +161,6 @@ export default function App() {
   useEffect(() => {
     const initFirebase = async () => {
         try {
-            // --- COLLEZ VOTRE CONFIGURATION FIREBASE ICI ---
             const firebaseConfig = {
               apiKey: "AIzaSyC19fhi-zWc-zlgZgjcQ7du2pK7CaywyO0",
               authDomain: "application-devis-f2a31.firebaseapp.com",
@@ -168,11 +170,8 @@ export default function App() {
               appId: "1:960846329322:web:5802132e187aa131906e93",
               measurementId: "G-1F9T98PGS9"
             };
-            // -------------------------------------------
             
             const appId = firebaseConfig.appId;
-            if (!appId) throw new Error("L'appId est manquant dans la configuration Firebase.");
-
             appIdRef.current = appId;
 
             const app = initializeApp(firebaseConfig);
@@ -194,11 +193,6 @@ export default function App() {
             }
         } catch (error) {
             console.error("Erreur Firebase:", error);
-            if (error.code === 'auth/configuration-not-found') {
-                setNotification("ERREUR : La connexion anonyme doit être activée dans votre console Firebase. Allez dans Authentication -> Sign-in method -> Anonyme -> Activer.");
-            } else {
-                setNotification("Erreur de chargement des données.");
-            }
             setConfig(initialData);
         } finally {
             setIsLoading(false);
@@ -232,12 +226,12 @@ export default function App() {
   const handleDiscountChange = (index, field, value) => {
     const newDiscounts = [...config.discounts];
     let finalValue = value;
-    if (field === 'value') finalValue = parseFloat(value) / 100 || 0;
+    if (field === 'value') finalValue = parseFloat(value) || 0;
     if (field === 'code') finalValue = value.toUpperCase();
     newDiscounts[index] = { ...newDiscounts[index], [field]: finalValue };
     setConfig(prev => ({...prev, discounts: newDiscounts}));
   };
-  const addDiscount = () => setConfig(prev => ({...prev, discounts: [...prev.discounts, { id: `new_${Date.now()}`, code: 'NOUVEAUCODE', value: 0.1, active: true, type: 'materiel' }]}));
+  const addDiscount = () => setConfig(prev => ({...prev, discounts: [...prev.discounts, { id: `new_${Date.now()}`, code: 'NOUVEAUCODE', value: 10, active: true, type: 'materiel' }]}));
   const removeDiscount = (index) => setConfig(prev => ({...prev, discounts: config.discounts.filter((_, i) => i !== index)}));
   const handleSettingsChange = (field, value, subfield = null) => {
     if (subfield) {
@@ -258,16 +252,69 @@ export default function App() {
         case 'products':
             return (
                 <>
-                    <SectionCard title="Offres Principales">{/* ... */}</SectionCard>
-                    <SectionCard title="Packs Supplémentaires">{/* ... */}</SectionCard>
+                    <SectionCard title="Offres Principales">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {Object.entries(config.offers).map(([key, offer]) => (
+                                <ProductInputs key={key} label={offer.name} price={offer.price} monthlyFee={offer.mensualite} onPriceChange={(e) => handleOfferChange(key, 'price', e.target.value)} onMonthlyFeeChange={(e) => handleOfferChange(key, 'mensualite', e.target.value)} />
+                            ))}
+                        </div>
+                    </SectionCard>
+                    <SectionCard title="Packs Supplémentaires">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                             {Object.entries(config.packs).map(([key, pack]) => (
+                                <ProductInputs key={key} label={pack.name} price={pack.price} monthlyFee={pack.mensualite} onPriceChange={(e) => handlePackChange(key, 'price', e.target.value)} onMonthlyFeeChange={(e) => handlePackChange(key, 'mensualite', e.target.value)} />
+                            ))}
+                        </div>
+                    </SectionCard>
                 </>
             );
         case 'items':
-            return <SectionCard title="Éléments Supplémentaires (Achat unique)">{/* ... */}</SectionCard>;
+            return <SectionCard title="Éléments Supplémentaires (Achat unique)">
+                    <div className="space-y-4">
+                        {config.extraItems.map((item, index) => (
+                            <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-3 bg-gray-50 rounded-md">
+                                <input type="text" value={item.name} onChange={(e) => handleExtraItemChange(index, 'name', e.target.value)} className="p-2 border rounded-md flex-grow" placeholder="Nom de l'élément" />
+                                <div className="sm:w-40 flex-shrink-0"><PriceInput label="" value={item.price} onChange={(e) => handleExtraItemChange(index, 'price', e.target.value)} /></div>
+                                <button onClick={() => removeExtraItem(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-full self-center sm:self-auto"><TrashIcon /></button>
+                            </div>
+                        ))}
+                        <button onClick={addExtraItem} className="flex items-center gap-2 text-blue-600 font-semibold mt-4 hover:text-blue-800"><PlusCircleIcon /> Ajouter un élément</button>
+                    </div>
+                </SectionCard>;
         case 'discounts':
-            return <SectionCard title="Codes de Réduction">{/* ... */}</SectionCard>;
+            return <SectionCard title="Codes de Réduction">
+                    <div className="space-y-4">
+                        {config.discounts.map((discount, index) => (
+                            <div key={discount.id} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 items-center gap-4 p-3 bg-gray-50 rounded-md">
+                                <input type="text" value={discount.code} onChange={(e) => handleDiscountChange(index, 'code', e.target.value)} className="p-2 border rounded-md lg:col-span-4" placeholder="CODEPROMO" />
+                                <div className="lg:col-span-3">
+                                    <PriceInput label="Montant" value={discount.value} onChange={(e) => handleDiscountChange(index, 'value', e.target.value)} />
+                                </div>
+                                <select value={discount.type} onChange={(e) => handleDiscountChange(index, 'type', e.target.value)} className="p-2 border rounded-md bg-white lg:col-span-3">
+                                    <option value="materiel">Matériel</option>
+                                    <option value="abonnement">Abonnement</option>
+                                </select>
+                                <div className="flex items-center justify-between lg:col-span-2">
+                                    <label className="flex items-center gap-2 p-2 bg-white border rounded-md cursor-pointer">
+                                        <input type="checkbox" checked={discount.active} onChange={(e) => handleDiscountChange(index, 'active', e.target.checked)} className="h-4 w-4 rounded text-indigo-600"/>
+                                        <span>Actif</span>
+                                    </label>
+                                    <button onClick={() => removeDiscount(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon /></button>
+                                </div>
+                            </div>
+                        ))}
+                        <button onClick={addDiscount} className="flex items-center gap-2 text-blue-600 font-semibold mt-4 hover:text-blue-800"><PlusCircleIcon /> Ajouter un code</button>
+                    </div>
+                </SectionCard>;
         case 'settings':
-            return <SectionCard title="Paramètres Généraux">{/* ... */}</SectionCard>;
+            return <SectionCard title="Paramètres Généraux">
+                    <div className="space-y-4 max-w-sm">
+                        <PriceInput label="Frais d'installation" value={config.settings.installationFee} onChange={e => handleSettingsChange('installationFee', e.target.value)} />
+                        <hr/><h3 className="font-semibold pt-2 text-gray-800">Taux de TVA</h3>
+                        <PercentageInput label="TVA Résidentiel" value={config.settings.vat.residentiel} onChange={e => handleSettingsChange('vat', e.target.value, 'residentiel')} />
+                        <PercentageInput label="TVA Professionnel" value={config.settings.vat.professionnel} onChange={e => handleSettingsChange('vat', e.target.value, 'professionnel')} />
+                    </div>
+                </SectionCard>;
     }
   }
 
@@ -299,57 +346,7 @@ export default function App() {
             </div>
 
             <div>
-                {/* Le contenu des autres onglets est masqué pour la concision */}
-                {activeTab === 'devis' && <SectionCard title="Devis Réalisés"><DevisList db={dbRef.current} appId={appIdRef.current} /></SectionCard>}
-                {activeTab === 'products' && <>
-                    <SectionCard title="Offres Principales">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {Object.entries(config.offers).map(([key, offer]) => (
-                                <ProductInputs key={key} label={offer.name} price={offer.price} monthlyFee={offer.mensualite} onPriceChange={(e) => handleOfferChange(key, 'price', e.target.value)} onMonthlyFeeChange={(e) => handleOfferChange(key, 'mensualite', e.target.value)} />
-                            ))}
-                        </div>
-                    </SectionCard>
-                    <SectionCard title="Packs Supplémentaires">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                             {Object.entries(config.packs).map(([key, pack]) => (
-                                <ProductInputs key={key} label={pack.name} price={pack.price} monthlyFee={pack.mensualite} onPriceChange={(e) => handlePackChange(key, 'price', e.target.value)} onMonthlyFeeChange={(e) => handlePackChange(key, 'mensualite', e.target.value)} />
-                            ))}
-                        </div>
-                    </SectionCard>
-                </>}
-                 {activeTab === 'items' && <SectionCard title="Éléments Supplémentaires (Achat unique)">
-                    <div className="space-y-4">
-                        {config.extraItems.map((item, index) => (
-                            <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-3 bg-gray-50 rounded-md">
-                                <input type="text" value={item.name} onChange={(e) => handleExtraItemChange(index, 'name', e.target.value)} className="p-2 border rounded-md flex-grow" placeholder="Nom de l'élément" />
-                                <div className="sm:w-40 flex-shrink-0"><PriceInput label="" value={item.price} onChange={(e) => handleExtraItemChange(index, 'price', e.target.value)} /></div>
-                                <button onClick={() => removeExtraItem(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-full self-center sm:self-auto"><TrashIcon /></button>
-                            </div>
-                        ))}
-                        <button onClick={addExtraItem} className="flex items-center gap-2 text-blue-600 font-semibold mt-4 hover:text-blue-800"><PlusCircleIcon /> Ajouter un élément</button>
-                    </div>
-                </SectionCard>}
-                {activeTab === 'discounts' && <SectionCard title="Codes de Réduction">
-                    <div className="space-y-4">
-                        {config.discounts.map((discount, index) => (
-                            <div key={discount.id} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 items-center gap-4 p-3 bg-gray-50 rounded-md">
-                                <input type="text" value={discount.code} onChange={(e) => handleDiscountChange(index, 'code', e.target.value)} className="p-2 border rounded-md lg:col-span-4" placeholder="CODEPROMO" />
-                                <div className="relative lg:col-span-3"><input type="number" value={discount.value * 100} onChange={(e) => handleDiscountChange(index, 'value', e.target.value)} className="p-2 border rounded-md w-full" placeholder="10" /><span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">%</span></div>
-                                <select value={discount.type} onChange={(e) => handleDiscountChange(index, 'type', e.target.value)} className="p-2 border rounded-md bg-white lg:col-span-3"><option value="materiel">Matériel</option><option value="abonnement">Abonnement</option></select>
-                                <div className="flex items-center justify-between lg:col-span-2"><label className="flex items-center gap-2 p-2 bg-white border rounded-md cursor-pointer"><input type="checkbox" checked={discount.active} onChange={(e) => handleDiscountChange(index, 'active', e.target.checked)} className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"/><span>Actif</span></label><button onClick={() => removeDiscount(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon /></button></div>
-                            </div>
-                        ))}
-                        <button onClick={addDiscount} className="flex items-center gap-2 text-blue-600 font-semibold mt-4 hover:text-blue-800"><PlusCircleIcon /> Ajouter un code</button>
-                    </div>
-                </SectionCard>}
-                {activeTab === 'settings' && <SectionCard title="Paramètres Généraux">
-                    <div className="space-y-4 max-w-sm">
-                        <PriceInput label="Frais d'installation" value={config.settings.installationFee} onChange={e => handleSettingsChange('installationFee', e.target.value)} />
-                        <hr/><h3 className="font-semibold pt-2 text-gray-800">Taux de TVA</h3>
-                        <PercentageInput label="TVA Résidentiel" value={config.settings.vat.residentiel} onChange={e => handleSettingsChange('vat', e.target.value, 'residentiel')} />
-                        <PercentageInput label="TVA Professionnel" value={config.settings.vat.professionnel} onChange={e => handleSettingsChange('vat', e.target.value, 'professionnel')} />
-                    </div>
-                </SectionCard>}
+                {renderContent()}
             </div>
         </main>
         

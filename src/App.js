@@ -8,7 +8,7 @@ import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, setLogLe
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
 const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
-const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const TagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>;
 const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
 const ArchiveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
@@ -46,11 +46,7 @@ const initialData = {
     },
   },
   extraItems: [],
-  discounts: [
-    { id: 'BIENVENUE50', code: 'BIENVENUE50', value: 50, active: true, type: 'materiel' },
-    { id: 'ABO5', code: 'ABO5', value: 5, active: true, type: 'abonnement' },
-    { id: 'OPTIMAL1', code: 'OPTIMAL1', value: 1, active: true, type: 'prix_fixe', targetOffer: 'optimale' },
-  ],
+  discounts: [],
   settings: {
       installationFee: 350,
       vat: {
@@ -280,8 +276,11 @@ export default function App() {
     
     const updatedDiscount = { ...newDiscounts[index], [field]: finalValue };
 
-    if (field === 'type' && finalValue !== 'prix_fixe') {
+    if (field === 'type' && (finalValue !== 'prix_fixe')) {
         delete updatedDiscount.targetOffer;
+    }
+     if (field === 'type' && (finalValue === 'installation_offerte')) {
+        updatedDiscount.value = 0;
     }
     if (field === 'type' && finalValue === 'prix_fixe' && !updatedDiscount.targetOffer) {
         updatedDiscount.targetOffer = 'initiale'; // Default target
@@ -336,25 +335,29 @@ export default function App() {
                 <SectionCard title="Codes de Réduction">
                     <div className="space-y-4">
                         {config.discounts.map((discount, index) => (
-                            <div key={discount.id} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 items-center gap-4 p-3 bg-gray-50 rounded-md">
+                            <div key={discount.id} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 items-end gap-4 p-3 bg-gray-50 rounded-md">
                                 <input type="text" value={discount.code} onChange={(e) => handleDiscountChange(index, 'code', e.target.value)} className="p-2 border rounded-md lg:col-span-3" placeholder="CODEPROMO" />
                                 
                                 <div className="lg:col-span-3">
-                                    <PriceInput label={discount.type === 'prix_fixe' ? "Prix Fixe" : "Montant Remise"} value={discount.value} onChange={(e) => handleDiscountChange(index, 'value', e.target.value)} />
+                                    {discount.type !== 'installation_offerte' && <PriceInput label={discount.type === 'prix_fixe' ? "Prix Fixe (€)" : "Montant Remise (€)"} value={discount.value} onChange={(e) => handleDiscountChange(index, 'value', e.target.value)} />}
                                 </div>
                                 
-                                <select value={discount.type} onChange={(e) => handleDiscountChange(index, 'type', e.target.value)} className="p-2 border rounded-md bg-white lg:col-span-2 h-[42px] self-end">
+                                <select value={discount.type} onChange={(e) => handleDiscountChange(index, 'type', e.target.value)} className="p-2 border rounded-md bg-white lg:col-span-2 h-[42px]">
                                     <option value="materiel">Remise Matériel (€)</option>
                                     <option value="abonnement">Remise Abonnement (€)</option>
                                     <option value="prix_fixe">Prix Fixe Matériel</option>
+                                    <option value="installation_offerte">Frais d'installation offerts</option>
                                 </select>
 
                                 {discount.type === 'prix_fixe' && (
-                                    <select value={discount.targetOffer} onChange={(e) => handleDiscountChange(index, 'targetOffer', e.target.value)} className="p-2 border rounded-md bg-white lg:col-span-2 h-[42px] self-end">
-                                        {Object.entries(config.offers).map(([key, offer]) => (
-                                            <option key={key} value={key}>{offer.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="lg:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700">Offre Ciblée</label>
+                                        <select value={discount.targetOffer} onChange={(e) => handleDiscountChange(index, 'targetOffer', e.target.value)} className="p-2 border rounded-md bg-white w-full h-[42px] mt-1">
+                                            {Object.entries(config.offers).map(([key, offer]) => (
+                                                <option key={key} value={key}>{offer.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 )}
                                 
                                 <div className={`flex items-center justify-between ${discount.type === 'prix_fixe' ? 'lg:col-span-2' : 'lg:col-span-4'}`}>

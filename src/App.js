@@ -17,13 +17,33 @@ const ArchiveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" hei
 // --- Données par défaut ---
 const initialData = {
   offers: {
-    initiale: { name: 'Offre Initiale', price: 1500, mensualite: 29.99 },
-    optimale: { name: 'Offre Optimale', price: 2500, mensualite: 49.99 },
+    initiale: { 
+      name: 'Offre Initiale', 
+      residentiel: { price: 1500, mensualite: 29.99 },
+      professionnel: { price: 1800, mensualite: 39.99 }
+    },
+    optimale: { 
+      name: 'Offre Optimale', 
+      residentiel: { price: 2500, mensualite: 49.99 },
+      professionnel: { price: 2900, mensualite: 59.99 }
+    },
   },
   packs: {
-    argent: { name: 'Pack Argent', price: 500, mensualite: 10 },
-    or: { name: 'Pack Or', price: 1000, mensualite: 20 },
-    platine: { name: 'Pack Platine', price: 1500, mensualite: 30 },
+    argent: { 
+      name: 'Pack Argent', 
+      residentiel: { price: 500, mensualite: 10 },
+      professionnel: { price: 600, mensualite: 15 }
+    },
+    or: { 
+      name: 'Pack Or', 
+      residentiel: { price: 1000, mensualite: 20 },
+      professionnel: { price: 1200, mensualite: 25 }
+    },
+    platine: { 
+      name: 'Pack Platine', 
+      residentiel: { price: 1500, mensualite: 30 },
+      professionnel: { price: 1800, mensualite: 35 }
+    },
   },
   extraItems: [],
   discounts: [
@@ -68,15 +88,30 @@ const PercentageInput = ({ label, value, onChange }) => (
     </div>
 );
 
-const ProductInputs = ({ label, price, monthlyFee, onPriceChange, onMonthlyFeeChange }) => (
-    <div className="p-4 border rounded-lg bg-gray-50">
-        <h3 className="font-semibold text-gray-800 mb-2">{label}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <PriceInput label="Prix Achat" value={price} onChange={onPriceChange} />
-            <PriceInput label="Mensualité" value={monthlyFee} onChange={onMonthlyFeeChange} />
+const DifferentiatedProductInputs = ({ name, data, onChange }) => (
+    <div className="p-4 border rounded-lg bg-gray-50 space-y-4">
+        <h3 className="font-semibold text-gray-900 text-lg text-center">{name}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Prix Résidentiel */}
+            <div className="p-3 bg-white rounded-md border">
+                <h4 className="font-semibold text-gray-700 mb-2">Particulier</h4>
+                <div className="space-y-2">
+                    <PriceInput label="Prix Achat" value={data.residentiel?.price || 0} onChange={(e) => onChange('residentiel', 'price', e.target.value)} />
+                    <PriceInput label="Mensualité" value={data.residentiel?.mensualite || 0} onChange={(e) => onChange('residentiel', 'mensualite', e.target.value)} />
+                </div>
+            </div>
+            {/* Prix Professionnel */}
+            <div className="p-3 bg-white rounded-md border">
+                <h4 className="font-semibold text-gray-700 mb-2">Professionnel</h4>
+                <div className="space-y-2">
+                    <PriceInput label="Prix Achat" value={data.professionnel?.price || 0} onChange={(e) => onChange('professionnel', 'price', e.target.value)} />
+                    <PriceInput label="Mensualité" value={data.professionnel?.mensualite || 0} onChange={(e) => onChange('professionnel', 'mensualite', e.target.value)} />
+                </div>
+            </div>
         </div>
     </div>
 );
+
 
 const DevisList = ({ db, appId }) => {
     const [quotes, setQuotes] = useState([]);
@@ -90,7 +125,7 @@ const DevisList = ({ db, appId }) => {
                 const q = query(collection(db, quotesPath));
                 const querySnapshot = await getDocs(q);
                 const quotesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                quotesList.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+                quotesList.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                 setQuotes(quotesList);
             } catch (error) {
                 console.error("Erreur lors de la récupération des devis:", error);
@@ -126,7 +161,7 @@ const DevisList = ({ db, appId }) => {
                         <tr key={quote.id} className="border-b hover:bg-gray-50">
                             <td className="py-3 px-4 font-medium">{quote.salesperson || 'N/A'}</td>
                             <td className="py-3 px-4">{quote.client.prenom} {quote.client.nom}</td>
-                            <td className="py-3 px-4">{new Date(quote.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                            <td className="py-3 px-4">{quote.createdAt ? new Date(quote.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
                             <td className="py-3 px-4">{quote.calculation?.oneTimeTotal?.toFixed(2) || 'N/A'} €</td>
                             <td className="py-3 px-4">
                                 {quote.installationDate ? (
@@ -192,7 +227,6 @@ export default function App() {
                 setConfig(initialData);
             }
         } catch (error) {
-            console.error("Erreur Firebase:", error);
             setConfig(initialData);
         } finally {
             setIsLoading(false);
@@ -214,15 +248,31 @@ export default function App() {
     }
   };
 
-  const handleOfferChange = (key, field, value) => setConfig(prev => ({ ...prev, offers: { ...prev.offers, [key]: { ...prev.offers[key], [field]: parseFloat(value) || 0 } } }));
-  const handlePackChange = (key, field, value) => setConfig(prev => ({ ...prev, packs: { ...prev.packs, [key]: { ...prev.packs[key], [field]: parseFloat(value) || 0 } } }));
+  const handleProductChange = (category, key, type, field, value) => {
+    setConfig(prev => ({
+        ...prev,
+        [category]: {
+            ...prev[category],
+            [key]: {
+                ...prev[category][key],
+                [type]: {
+                    ...(prev[category][key][type] || {}),
+                    [field]: parseFloat(value) || 0
+                }
+            }
+        }
+    }));
+  };
+
   const handleExtraItemChange = (index, field, value) => {
     const newItems = [...config.extraItems];
     newItems[index] = { ...newItems[index], [field]: field === 'price' ? parseFloat(value) || 0 : value };
     setConfig(prev => ({ ...prev, extraItems: newItems }));
   };
+  
   const addExtraItem = () => setConfig(prev => ({...prev, extraItems: [...prev.extraItems, { id: `new_${Date.now()}`, name: 'Nouvel élément', price: 0 }]}));
   const removeExtraItem = (index) => setConfig(prev => ({...prev, extraItems: config.extraItems.filter((_, i) => i !== index)}));
+  
   const handleDiscountChange = (index, field, value) => {
     const newDiscounts = [...config.discounts];
     let finalValue = value;
@@ -231,8 +281,10 @@ export default function App() {
     newDiscounts[index] = { ...newDiscounts[index], [field]: finalValue };
     setConfig(prev => ({...prev, discounts: newDiscounts}));
   };
+  
   const addDiscount = () => setConfig(prev => ({...prev, discounts: [...prev.discounts, { id: `new_${Date.now()}`, code: 'NOUVEAUCODE', value: 10, active: true, type: 'materiel' }]}));
   const removeDiscount = (index) => setConfig(prev => ({...prev, discounts: config.discounts.filter((_, i) => i !== index)}));
+  
   const handleSettingsChange = (field, value, subfield = null) => {
     if (subfield) {
         setConfig(prev => ({ ...prev, settings: { ...prev.settings, [field]: { ...prev.settings[field], [subfield]: parseFloat(value) / 100 || 0 }}}));
@@ -253,16 +305,16 @@ export default function App() {
             return (
                 <>
                     <SectionCard title="Offres Principales">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-4">
                             {Object.entries(config.offers).map(([key, offer]) => (
-                                <ProductInputs key={key} label={offer.name} price={offer.price} monthlyFee={offer.mensualite} onPriceChange={(e) => handleOfferChange(key, 'price', e.target.value)} onMonthlyFeeChange={(e) => handleOfferChange(key, 'mensualite', e.target.value)} />
+                                <DifferentiatedProductInputs key={key} name={offer.name} data={offer} onChange={(type, field, value) => handleProductChange('offers', key, type, field, value)} />
                             ))}
                         </div>
                     </SectionCard>
                     <SectionCard title="Packs Supplémentaires">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              {Object.entries(config.packs).map(([key, pack]) => (
-                                <ProductInputs key={key} label={pack.name} price={pack.price} monthlyFee={pack.mensualite} onPriceChange={(e) => handlePackChange(key, 'price', e.target.value)} onMonthlyFeeChange={(e) => handlePackChange(key, 'mensualite', e.target.value)} />
+                                <DifferentiatedProductInputs key={key} name={pack.name} data={pack} onChange={(type, field, value) => handleProductChange('packs', key, type, field, value)} />
                             ))}
                         </div>
                     </SectionCard>
@@ -288,7 +340,7 @@ export default function App() {
                             <div key={discount.id} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 items-center gap-4 p-3 bg-gray-50 rounded-md">
                                 <input type="text" value={discount.code} onChange={(e) => handleDiscountChange(index, 'code', e.target.value)} className="p-2 border rounded-md lg:col-span-4" placeholder="CODEPROMO" />
                                 <div className="lg:col-span-3">
-                                    <PriceInput label="Montant" value={discount.value} onChange={(e) => handleDiscountChange(index, 'value', e.target.value)} />
+                                    <PriceInput label="Montant de la remise" value={discount.value} onChange={(e) => handleDiscountChange(index, 'value', e.target.value)} />
                                 </div>
                                 <select value={discount.type} onChange={(e) => handleDiscountChange(index, 'type', e.target.value)} className="p-2 border rounded-md bg-white lg:col-span-3">
                                     <option value="materiel">Matériel</option>

@@ -329,7 +329,20 @@ export default function App() {
                 </>
             );
         case 'items':
-            return <SectionCard title="Éléments Supplémentaires (Achat unique)">{/* ... */}</SectionCard>;
+            return (
+                <SectionCard title="Éléments Supplémentaires (Achat unique)">
+                    <div className="space-y-4">
+                        {config.extraItems.map((item, index) => (
+                            <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-3 bg-gray-50 rounded-md">
+                                <input type="text" value={item.name} onChange={(e) => handleExtraItemChange(index, 'name', e.target.value)} className="p-2 border rounded-md flex-grow" placeholder="Nom de l'élément" />
+                                <div className="sm:w-40 flex-shrink-0"><PriceInput label="" value={item.price} onChange={(e) => handleExtraItemChange(index, 'price', e.target.value)} /></div>
+                                <button onClick={() => removeExtraItem(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-full self-center sm:self-auto"><TrashIcon /></button>
+                            </div>
+                        ))}
+                        <button onClick={addExtraItem} className="flex items-center gap-2 text-blue-600 font-semibold mt-4 hover:text-blue-800"><PlusCircleIcon /> Ajouter un élément</button>
+                    </div>
+                </SectionCard>
+            );
         case 'discounts':
             return (
                 <SectionCard title="Codes de Réduction">
@@ -374,7 +387,16 @@ export default function App() {
                 </SectionCard>
             );
         case 'settings':
-            return <SectionCard title="Paramètres Généraux">{/* ... */}</SectionCard>;
+            return (
+                <SectionCard title="Paramètres Généraux">
+                    <div className="space-y-4 max-w-sm">
+                        <PriceInput label="Frais d'installation" value={config.settings.installationFee} onChange={e => handleSettingsChange('installationFee', e.target.value)} />
+                        <hr/><h3 className="font-semibold pt-2 text-gray-800">Taux de TVA</h3>
+                        <PercentageInput label="TVA Résidentiel" value={config.settings.vat.residentiel} onChange={e => handleSettingsChange('vat', e.target.value, 'residentiel')} />
+                        <PercentageInput label="TVA Professionnel" value={config.settings.vat.professionnel} onChange={e => handleSettingsChange('vat', e.target.value, 'professionnel')} />
+                    </div>
+                </SectionCard>
+            );
     }
   }
 

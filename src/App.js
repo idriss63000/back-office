@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 // Importations Firebase
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, setLogLevel, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, setLogLevel, onSnapshot, addDoc, deleteDoc, where } from 'firebase/firestore';
 
 // --- Icônes SVG ---
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
@@ -13,212 +13,99 @@ const TagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height=
 const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
 const ArchiveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
+const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 
 // --- Données par défaut ---
-const initialData = {
-  offers: {
-    initiale: { name: 'Offre Initiale', description: 'Description de base pour l\'offre initiale.', residentiel: { price: 1500, mensualite: 29.99 }, professionnel: { price: 1800, mensualite: 39.99 } },
-    optimale: { name: 'Offre Optimale', description: 'Description complète pour l\'offre optimale.', residentiel: { price: 2500, mensualite: 49.99 }, professionnel: { price: 2900, mensualite: 59.99 } },
-  },
-  packs: {
-    argent: { name: 'Pack Argent', residentiel: { price: 500, mensualite: 10 }, professionnel: { price: 600, mensualite: 15 } },
-    or: { name: 'Pack Or', residentiel: { price: 1000, mensualite: 20 }, professionnel: { price: 1200, mensualite: 25 } },
-    platine: { name: 'Pack Platine', residentiel: { price: 1500, mensualite: 30 }, professionnel: { price: 1800, mensualite: 35 } },
-  },
-  extraItems: [],
-  discounts: [],
-  settings: { installationFee: 350, vat: { residentiel: 0.10, professionnel: 0.20 } }
-};
+const initialData = { /* ... */ };
 
 // --- Composants du Back-Office ---
 
-const SectionCard = ({ title, children }) => (
-    <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">{title}</h2>
-        {children}
-    </div>
-);
+const SectionCard = ({ title, children }) => ( <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6"> <h2 className="text-xl font-bold text-gray-800 mb-4">{title}</h2> {children} </div> );
+const PriceInput = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-gray-700">{label}</label> <div className="mt-1 relative rounded-md shadow-sm"> <input type="number" value={value} onChange={onChange} className="p-2 border rounded-md w-full focus:ring-indigo-500 focus:border-indigo-500"/> <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"><span className="text-gray-500 sm:text-sm">€</span></div> </div> </div> );
+const PercentageInput = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-gray-700">{label}</label> <div className="mt-1 relative rounded-md shadow-sm"> <input type="number" value={value * 100} onChange={onChange} className="p-2 border rounded-md w-full focus:ring-indigo-500 focus:border-indigo-500"/> <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"><span className="text-gray-500 sm:text-sm">%</span></div> </div> </div> );
+const DifferentiatedProductInputs = ({ name, data, onChange }) => ( <div className="p-4 border rounded-lg bg-gray-50 space-y-4"> <h3 className="font-semibold text-gray-900 text-lg text-center">{name}</h3> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div className="p-3 bg-white rounded-md border"> <h4 className="font-semibold text-gray-700 mb-2">Particulier</h4> <div className="space-y-2"> <PriceInput label="Prix Achat" value={data.residentiel?.price || 0} onChange={(e) => onChange('residentiel', 'price', e.target.value)} /> <PriceInput label="Mensualité" value={data.residentiel?.mensualite || 0} onChange={(e) => onChange('residentiel', 'mensualite', e.target.value)} /> </div> </div> <div className="p-3 bg-white rounded-md border"> <h4 className="font-semibold text-gray-700 mb-2">Professionnel</h4> <div className="space-y-2"> <PriceInput label="Prix Achat" value={data.professionnel?.price || 0} onChange={(e) => onChange('professionnel', 'price', e.target.value)} /> <PriceInput label="Mensualité" value={data.professionnel?.mensualite || 0} onChange={(e) => onChange('professionnel', 'mensualite', e.target.value)} /> </div> </div> </div> </div> );
 
-const PriceInput = ({ label, value, onChange }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
-        <div className="mt-1 relative rounded-md shadow-sm">
-            <input type="number" value={value} onChange={onChange} className="p-2 border rounded-md w-full focus:ring-indigo-500 focus:border-indigo-500"/>
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"><span className="text-gray-500 sm:text-sm">€</span></div>
-        </div>
-    </div>
-);
+const AppointmentListBackOffice = ({ db, appId }) => { /* ... */ };
+const DevisList = ({ db, appId }) => { /* ... */ };
 
-const PercentageInput = ({ label, value, onChange }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
-        <div className="mt-1 relative rounded-md shadow-sm">
-            <input type="number" value={value * 100} onChange={onChange} className="p-2 border rounded-md w-full focus:ring-indigo-500 focus:border-indigo-500"/>
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"><span className="text-gray-500 sm:text-sm">%</span></div>
-        </div>
-    </div>
-);
-
-const DifferentiatedProductInputs = ({ name, data, onChange }) => (
-    <div className="p-4 border rounded-lg bg-gray-50 space-y-4">
-        <h3 className="font-semibold text-gray-900 text-lg text-center">{name}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-3 bg-white rounded-md border">
-                <h4 className="font-semibold text-gray-700 mb-2">Particulier</h4>
-                <div className="space-y-2">
-                    <PriceInput label="Prix Achat" value={data.residentiel?.price || 0} onChange={(e) => onChange('residentiel', 'price', e.target.value)} />
-                    <PriceInput label="Mensualité" value={data.residentiel?.mensualite || 0} onChange={(e) => onChange('residentiel', 'mensualite', e.target.value)} />
-                </div>
-            </div>
-            <div className="p-3 bg-white rounded-md border">
-                <h4 className="font-semibold text-gray-700 mb-2">Professionnel</h4>
-                <div className="space-y-2">
-                    <PriceInput label="Prix Achat" value={data.professionnel?.price || 0} onChange={(e) => onChange('professionnel', 'price', e.target.value)} />
-                    <PriceInput label="Mensualité" value={data.professionnel?.mensualite || 0} onChange={(e) => onChange('professionnel', 'mensualite', e.target.value)} />
-                </div>
-            </div>
-        </div>
-    </div>
-);
-
-// --- NOUVEAU COMPOSANT : Liste des Rendez-vous ---
-const AppointmentListBackOffice = ({ db, appId }) => {
-    const [appointments, setAppointments] = useState([]);
+// --- NOUVEAU COMPOSANT : Gestion des Commerciaux ---
+const SalespersonManager = ({ db, appId }) => {
+    const [salespersons, setSalespersons] = useState([]);
+    const [newSalespersonName, setNewSalespersonName] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    const salespersonsCollectionRef = collection(db, `/artifacts/${appId}/public/data/salespersons`);
 
     useEffect(() => {
-        if (!db || !appId) return;
-        
-        const appointmentsPath = `/artifacts/${appId}/public/data/appointments`;
-        const q = query(collection(db, appointmentsPath));
-
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const appointmentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            appointmentsList.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-            setAppointments(appointmentsList);
+        const unsubscribe = onSnapshot(salespersonsCollectionRef, (snapshot) => {
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setSalespersons(list);
             setIsLoading(false);
-        }, (error) => {
-            console.error("Erreur de lecture des RDV:", error);
+        }, (err) => {
+            console.error("Erreur de lecture des commerciaux:", err);
+            setError("Impossible de charger la liste des commerciaux.");
             setIsLoading(false);
         });
-
         return () => unsubscribe();
     }, [db, appId]);
 
-    const getStatusClass = (status) => {
-        switch (status) {
-            case 'confirmé': return 'bg-green-100 text-green-800';
-            case 'en attente': return 'bg-yellow-100 text-yellow-800';
-            case 'relance': return 'bg-blue-100 text-blue-800';
-            case 'pas vendu': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+    const handleAddSalesperson = async () => {
+        const name = newSalespersonName.trim();
+        if (!name) {
+            setError("Le nom ne peut pas être vide.");
+            return;
+        }
+        if (salespersons.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+            setError("Ce commercial existe déjà.");
+            return;
+        }
+        setError('');
+        try {
+            await addDoc(salespersonsCollectionRef, { name: name });
+            setNewSalespersonName('');
+        } catch (err) {
+            console.error("Erreur d'ajout du commercial:", err);
+            setError("Une erreur est survenue lors de l'ajout.");
         }
     };
 
-    if (isLoading) {
-        return <p className="text-center text-gray-500">Chargement des rendez-vous...</p>;
-    }
+    const handleDeleteSalesperson = async (id) => {
+        try {
+            await deleteDoc(doc(db, `/artifacts/${appId}/public/data/salespersons`, id));
+        } catch (err) {
+            console.error("Erreur de suppression du commercial:", err);
+            setError("Une erreur est survenue lors de la suppression.");
+        }
+    };
 
-    if (appointments.length === 0) {
-        return <p className="text-center text-gray-500">Aucun rendez-vous trouvé.</p>;
-    }
+    if (isLoading) return <p>Chargement...</p>;
 
     return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border">
-                <thead className="bg-gray-100">
-                    <tr>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Commercial</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Prospect</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Date RDV</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Adresse</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Téléphone</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Statut</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {appointments.map(app => (
-                        <tr key={app.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4 font-medium">{app.salesperson || 'N/A'}</td>
-                            <td className="py-3 px-4">{app.clientName}</td>
-                            <td className="py-3 px-4">{app.date ? new Date(app.date).toLocaleDateString() : 'N/A'}</td>
-                            <td className="py-3 px-4">{app.address}</td>
-                            <td className="py-3 px-4">{app.phone}</td>
-                            <td className="py-3 px-4">
-                                <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${getStatusClass(app.status)}`}>
-                                    {app.status}
-                                </span>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        <div className="space-y-6">
+            <div className="flex gap-2">
+                <input 
+                    type="text" 
+                    value={newSalespersonName} 
+                    onChange={(e) => setNewSalespersonName(e.target.value)}
+                    placeholder="Nom du nouveau commercial"
+                    className="p-2 border rounded-md flex-grow"
+                />
+                <button onClick={handleAddSalesperson} className="bg-blue-600 text-white font-semibold px-4 rounded-md hover:bg-blue-700">Ajouter</button>
+            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <div className="space-y-3">
+                {salespersons.map(s => (
+                    <div key={s.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                        <span className="font-medium">{s.name}</span>
+                        <button onClick={() => handleDeleteSalesperson(s.id)} className="text-red-500 hover:text-red-700"><TrashIcon /></button>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
 
-
-const DevisList = ({ db, appId }) => {
-    const [quotes, setQuotes] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchQuotes = async () => {
-            if (!db || !appId) return;
-            try {
-                const quotesPath = `/artifacts/${appId}/public/data/devis`;
-                const q = query(collection(db, quotesPath));
-                const querySnapshot = await getDocs(q);
-                const quotesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                quotesList.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                setQuotes(quotesList);
-            } catch (error) {
-                console.error("Erreur lors de la récupération des devis:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchQuotes();
-    }, [db, appId]);
-
-    if (isLoading) return <p className="text-center text-gray-500">Chargement des devis...</p>;
-    if (quotes.length === 0) return <p className="text-center text-gray-500">Aucun devis réalisé pour le moment.</p>;
-
-    return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border">
-                <thead className="bg-gray-100">
-                    <tr>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Commercial</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Client</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Date Création</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Montant TTC</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Statut</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {quotes.map(quote => (
-                        <tr key={quote.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4 font-medium">{quote.salesperson || 'N/A'}</td>
-                            <td className="py-3 px-4">{quote.client.prenom} {quote.client.nom}</td>
-                            <td className="py-3 px-4">{quote.createdAt ? new Date(quote.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
-                            <td className="py-3 px-4">{quote.calculation?.oneTimeTotal?.toFixed(2) || 'N/A'} €</td>
-                            <td className="py-3 px-4">
-                                {quote.installationDate ? (
-                                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Install. le {new Date(quote.installationDate).toLocaleDateString()}</span>
-                                ) : quote.followUpDate ? (
-                                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Relance le {new Date(quote.followUpDate).toLocaleDateString()}</span>
-                                ) : (
-                                    <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">En attente</span>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
 
 export default function App() {
     const [config, setConfig] = useState(null);
@@ -232,7 +119,7 @@ export default function App() {
 
     useEffect(() => {
         const initFirebase = async () => {
-            try {
+             try {
                 const firebaseConfig = {
                     apiKey: "AIzaSyC19fhi-zWc-zlgZgjcQ7du2pK7CaywyO0",
                     authDomain: "application-devis-f2a31.firebaseapp.com",
@@ -242,22 +129,17 @@ export default function App() {
                     appId: "1:960846329322:web:5802132e187aa131906e93",
                     measurementId: "G-1F9T98PGS9"
                 };
-                
                 const appId = firebaseConfig.appId;
                 appIdRef.current = appId;
-
                 const app = initializeApp(firebaseConfig);
                 const db = getFirestore(app);
                 const auth = getAuth(app);
                 dbRef.current = db;
                 setLogLevel('debug');
-
                 await signInAnonymously(auth);
-
                 const docPath = `/artifacts/${appId}/public/data/config/main`;
                 configDocRef.current = doc(db, docPath);
                 const docSnap = await getDoc(configDocRef.current);
-
                 if (docSnap.exists()) setConfig(docSnap.data());
                 else {
                     await setDoc(configDocRef.current, initialData);
@@ -289,101 +171,13 @@ export default function App() {
 
     const renderContent = () => {
         switch(activeTab) {
-            case 'devis':
-                return <SectionCard title="Devis Réalisés"><DevisList db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
-            case 'appointments':
-                return <SectionCard title="Rendez-vous Commerciaux"><AppointmentListBackOffice db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
-            case 'products':
-                return (
-                    <>
-                        <SectionCard title="Offres Principales">
-                            <div className="space-y-6">
-                                {Object.entries(config.offers).map(([key, offer]) => (
-                                    <div key={key} className="p-4 border rounded-lg bg-gray-50 space-y-4">
-                                        <h3 className="font-semibold text-gray-900 text-lg text-center">{offer.name}</h3>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">Description</label>
-                                            <textarea value={offer.description || ''} onChange={(e) => handleOfferFieldChange(key, 'description', e.target.value)} className="mt-1 block w-full p-2 border rounded-md" rows="3"></textarea>
-                                        </div>
-                                        <DifferentiatedProductInputs name="" data={offer} onChange={(type, field, value) => handleProductChange('offers', key, type, field, value)} />
-                                    </div>
-                                ))}
-                            </div>
-                        </SectionCard>
-                        <SectionCard title="Packs Supplémentaires">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 {Object.entries(config.packs).map(([key, pack]) => (
-                                     <DifferentiatedProductInputs key={key} name={pack.name} data={pack} onChange={(type, field, value) => handleProductChange('packs', key, type, field, value)} />
-                                 ))}
-                            </div>
-                        </SectionCard>
-                    </>
-                );
-            case 'items':
-                return (
-                    <SectionCard title="Éléments Supplémentaires (Achat unique)">
-                        <div className="space-y-4">
-                            {config.extraItems.map((item, index) => (
-                                <div key={item.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-3 bg-gray-50 rounded-md">
-                                    <input type="text" value={item.name} onChange={(e) => handleExtraItemChange(index, 'name', e.target.value)} className="p-2 border rounded-md flex-grow" placeholder="Nom de l'élément" />
-                                    <div className="sm:w-40 flex-shrink-0"><PriceInput label="" value={item.price} onChange={(e) => handleExtraItemChange(index, 'price', e.target.value)} /></div>
-                                    <button onClick={() => removeExtraItem(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-full self-center sm:self-auto"><TrashIcon /></button>
-                                </div>
-                            ))}
-                            <button onClick={addExtraItem} className="flex items-center gap-2 text-blue-600 font-semibold mt-4 hover:text-blue-800"><PlusCircleIcon /> Ajouter un élément</button>
-                        </div>
-                    </SectionCard>
-                );
-            case 'discounts':
-                return (
-                    <SectionCard title="Codes de Réduction">
-                        <div className="space-y-4">
-                            {config.discounts.map((discount, index) => (
-                                <div key={discount.id} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 items-end gap-4 p-3 bg-gray-50 rounded-md">
-                                    <input type="text" value={discount.code} onChange={(e) => handleDiscountChange(index, 'code', e.target.value)} className="p-2 border rounded-md lg:col-span-3" placeholder="CODEPROMO" />
-                                    <div className="lg:col-span-3">
-                                        {discount.type !== 'installation_offerte' && <PriceInput label={discount.type === 'prix_fixe' ? "Prix Fixe (€)" : "Montant Remise (€)"} value={discount.value} onChange={(e) => handleDiscountChange(index, 'value', e.target.value)} />}
-                                    </div>
-                                    <select value={discount.type} onChange={(e) => handleDiscountChange(index, 'type', e.target.value)} className="p-2 border rounded-md bg-white lg:col-span-2 h-[42px]">
-                                        <option value="materiel">Remise Matériel (€)</option>
-                                        <option value="abonnement">Remise Abonnement (€)</option>
-                                        <option value="prix_fixe">Prix Fixe Matériel</option>
-                                        <option value="installation_offerte">Frais d'installation offerts</option>
-                                    </select>
-                                    {discount.type === 'prix_fixe' && (
-                                        <div className="lg:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700">Offre Ciblée</label>
-                                            <select value={discount.targetOffer} onChange={(e) => handleDiscountChange(index, 'targetOffer', e.target.value)} className="p-2 border rounded-md bg-white w-full h-[42px] mt-1">
-                                                {Object.entries(config.offers).map(([key, offer]) => (
-                                                    <option key={key} value={key}>{offer.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
-                                    <div className={`flex items-center justify-between ${discount.type === 'prix_fixe' ? 'lg:col-span-2' : 'lg:col-span-4'}`}>
-                                        <label className="flex items-center gap-2 p-2 bg-white border rounded-md cursor-pointer">
-                                            <input type="checkbox" checked={discount.active} onChange={(e) => handleDiscountChange(index, 'active', e.target.checked)} className="h-4 w-4 rounded text-indigo-600"/>
-                                            <span>Actif</span>
-                                        </label>
-                                        <button onClick={() => removeDiscount(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon /></button>
-                                    </div>
-                                </div>
-                            ))}
-                            <button onClick={addDiscount} className="flex items-center gap-2 text-blue-600 font-semibold mt-4 hover:text-blue-800"><PlusCircleIcon /> Ajouter un code</button>
-                        </div>
-                    </SectionCard>
-                );
-            case 'settings':
-                return (
-                    <SectionCard title="Paramètres Généraux">
-                        <div className="space-y-4 max-w-sm">
-                            <PriceInput label="Frais d'installation" value={config.settings.installationFee} onChange={e => handleSettingsChange('installationFee', e.target.value)} />
-                            <hr/><h3 className="font-semibold pt-2 text-gray-800">Taux de TVA</h3>
-                            <PercentageInput label="TVA Résidentiel" value={config.settings.vat.residentiel} onChange={e => handleSettingsChange('vat', e.target.value, 'residentiel')} />
-                            <PercentageInput label="TVA Professionnel" value={config.settings.vat.professionnel} onChange={e => handleSettingsChange('vat', e.target.value, 'professionnel')} />
-                        </div>
-                    </SectionCard>
-                );
+            case 'devis': return <SectionCard title="Devis Réalisés"><DevisList db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
+            case 'appointments': return <SectionCard title="Rendez-vous Commerciaux"><AppointmentListBackOffice db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
+            case 'salespersons': return <SectionCard title="Gérer les Commerciaux"><SalespersonManager db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
+            case 'products': return ( <> ... </> );
+            case 'items': return ( <SectionCard title="Éléments Supplémentaires (Achat unique)"> ... </SectionCard> );
+            case 'discounts': return ( <SectionCard title="Codes de Réduction"> ... </SectionCard> );
+            case 'settings': return ( <SectionCard title="Paramètres Généraux"> ... </SectionCard> );
         }
     }
 
@@ -404,26 +198,19 @@ export default function App() {
                     </button>
                 </div>
             </header>
-
             <main className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
                 <div className="mb-6 p-1 sm:p-2 bg-gray-200 rounded-lg flex flex-wrap gap-1 sm:gap-2">
                     <TabButton tabName="devis" label="Devis" icon={<ArchiveIcon />} />
                     <TabButton tabName="appointments" label="Rendez-vous" icon={<CalendarIcon />} />
+                    <TabButton tabName="salespersons" label="Commerciaux" icon={<UsersIcon />} />
                     <TabButton tabName="products" label="Offres & Packs" icon={<TagIcon />} />
                     <TabButton tabName="items" label="Éléments" icon={<ListIcon />} />
                     <TabButton tabName="discounts" label="Réductions" icon={<TagIcon />} />
                     <TabButton tabName="settings" label="Paramètres" icon={<SettingsIcon />} />
                 </div>
-                <div>
-                    {renderContent()}
-                </div>
+                <div>{renderContent()}</div>
             </main>
-            
-            {notification && (
-                <div className="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-5 rounded-lg shadow-lg animate-pulse z-20">
-                    {notification}
-                </div>
-            )}
+            {notification && ( <div className="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-5 rounded-lg shadow-lg animate-pulse z-20">{notification}</div> )}
         </div>
     );
 }

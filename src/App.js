@@ -192,7 +192,7 @@ const Dashboard = ({ db, appId }) => {
 const DevisList = ({ db, appId }) => {
     const [quotes, setQuotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null); // NOUVEAU: State pour gérer les erreurs
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (!db || !appId) {
@@ -207,7 +207,7 @@ const DevisList = ({ db, appId }) => {
             setQuotes(quotesList);
             setError(null);
             setIsLoading(false);
-        }, (err) => { // CORRIGÉ: Ajout de la gestion d'erreur
+        }, (err) => {
             console.error("Erreur de lecture des devis:", err);
             setError("Impossible de charger les devis. Vérifiez les permissions Firestore.");
             setIsLoading(false);
@@ -263,7 +263,7 @@ const AppointmentListBO = ({ db, appId }) => {
     const [appointments, setAppointments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
-    const [error, setError] = useState(null); // NOUVEAU: State pour gérer les erreurs
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (!db || !appId) {
@@ -278,7 +278,7 @@ const AppointmentListBO = ({ db, appId }) => {
             setAppointments(list);
             setError(null);
             setIsLoading(false);
-        }, (err) => { // CORRIGÉ: Ajout de la gestion d'erreur
+        }, (err) => {
             console.error("Erreur de lecture des RDV:", err);
             setError("Impossible de charger les rendez-vous. Vérifiez les permissions Firestore.");
             setIsLoading(false);
@@ -368,6 +368,7 @@ const SalespersonsManager = ({ db, appId }) => {
     const [newSalesperson, setNewSalesperson] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState(null);
+    const [addError, setAddError] = useState('');
 
     const salespersonsPath = useMemo(() => `/artifacts/${appId}/public/data/salespersons`, [appId]);
 
@@ -389,7 +390,14 @@ const SalespersonsManager = ({ db, appId }) => {
     }, [db, appId, salespersonsPath]);
 
     const handleAdd = async () => {
+        setAddError('');
         if (newSalesperson.trim() === '') return;
+        
+        if (!db) {
+            setAddError("La connexion à la base de données n'est pas disponible.");
+            return;
+        }
+
         const q = query(collection(db, salespersonsPath), where("name", "==", newSalesperson.trim()));
         const existing = await getDocs(q);
         if (existing.empty) {
@@ -397,11 +405,12 @@ const SalespersonsManager = ({ db, appId }) => {
             setNewSalesperson('');
         } else {
             console.error("Ce commercial existe déjà.");
+            setAddError(`Le commercial "${newSalesperson.trim()}" existe déjà.`);
         }
     };
 
     const confirmDelete = async () => {
-        if (!deletingId) return;
+        if (!deletingId || !db) return;
         await deleteDoc(doc(db, salespersonsPath, deletingId));
         setDeletingId(null);
     };
@@ -421,12 +430,16 @@ const SalespersonsManager = ({ db, appId }) => {
             <div className="flex gap-2">
                 <input
                     value={newSalesperson}
-                    onChange={(e) => setNewSalesperson(e.target.value)}
+                    onChange={(e) => {
+                        setNewSalesperson(e.target.value);
+                        setAddError('');
+                    }}
                     placeholder="Nom du nouveau commercial"
                     className="p-2 border rounded-md w-full"
                 />
                 <button onClick={handleAdd} className="bg-blue-600 text-white px-4 rounded-md font-semibold">Ajouter</button>
             </div>
+            {addError && <p className="text-red-500 text-sm mt-2">{addError}</p>}
             <div className="space-y-2">
                 {salespersons.map(sp => (
                     <div key={sp.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
@@ -468,14 +481,14 @@ const PresentationManager = ({ db, appId }) => {
     }, [db, appId, videosPath]);
 
     const handleAdd = async () => {
-        if (newVideoTitle.trim() === '' || newVideoUrl.trim() === '') return;
+        if (newVideoTitle.trim() === '' || newVideoUrl.trim() === '' || !db) return;
         await addDoc(collection(db, videosPath), { title: newVideoTitle.trim(), url: newVideoUrl.trim() });
         setNewVideoTitle('');
         setNewVideoUrl('');
     };
     
     const confirmDelete = async () => {
-        if (!deletingId) return;
+        if (!deletingId || !db) return;
         await deleteDoc(doc(db, videosPath, deletingId));
         setDeletingId(null);
     };
@@ -544,11 +557,10 @@ export default function App() {
   useEffect(() => {
     const initFirebase = async () => {
         try {
+            // CORRIGÉ: Rétablissement de la logique pour utiliser les variables d'environnement
             if (typeof __firebase_config === 'undefined' || typeof __app_id === 'undefined') {
-                console.error("Firebase config non disponible. Utilisation de la configuration par défaut.");
+                console.error("Firebase config non disponible. L'application ne pourra pas se connecter à la base de données.");
                 setConfig(initialData);
-                dbRef.current = null;
-                appIdRef.current = 'default-app-id';
                 return;
             }
 
@@ -586,7 +598,7 @@ export default function App() {
                 setConfig(initialData);
             }
         } catch (error) {
-            console.error(error);
+            console.error("Erreur d'initialisation de Firebase:", error);
             setConfig(initialData);
         } finally {
             setIsLoading(false);
@@ -596,13 +608,18 @@ export default function App() {
   }, []);
 
   const handleSave = async () => {
-    if (!configDocRef.current || !config) return;
+    if (!configDocRef.current || !config) {
+        setNotification("Erreur: Connexion à la base de données non établie.");
+        setTimeout(() => setNotification(''), 3000);
+        return;
+    }
     setNotification('Sauvegarde en cours...');
     try {
         await setDoc(configDocRef.current, config, { merge: true });
         setNotification('Configuration sauvegardée avec succès !');
     } catch (error) {
         setNotification('Erreur lors de la sauvegarde.');
+        console.error("Erreur de sauvegarde:", error);
     } finally {
         setTimeout(() => setNotification(''), 3000);
     }

@@ -17,7 +17,6 @@ const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
 const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>;
-// NOUVEAU: Ajout d'icônes pour le Dashboard
 const BarChartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
 const AlertTriangleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
 
@@ -39,7 +38,6 @@ const initialData = {
 
 // --- Composants du Back-Office ---
 
-// NOUVEAU: Modal de confirmation pour les actions destructives (suppression)
 const ConfirmationModal = ({ title, message, onConfirm, onCancel }) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
@@ -124,13 +122,15 @@ const DifferentiatedProductInputs = ({ name, data, onChange }) => (
     </div>
 );
 
-// NOUVEAU: Dashboard pour avoir une vue d'ensemble de l'activité commerciale
 const Dashboard = ({ db, appId }) => {
     const [stats, setStats] = useState({ totalQuotes: 0, totalRevenue: 0, totalAppointments: 0, confirmedAppointments: 0 });
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!db || !appId) return;
+        if (!db || !appId) {
+            setIsLoading(false);
+            return;
+        }
 
         const fetchAllData = async () => {
             try {
@@ -145,12 +145,10 @@ const Dashboard = ({ db, appId }) => {
                     getDocs(appointmentsQuery)
                 ]);
 
-                // Calculs pour les devis
                 const quotesData = quotesSnapshot.docs.map(doc => doc.data());
                 const totalQuotes = quotesData.length;
                 const totalRevenue = quotesData.reduce((sum, quote) => sum + (quote.calculation?.oneTimeTotal || 0), 0);
 
-                // Calculs pour les rendez-vous
                 const appointmentsData = appointmentsSnapshot.docs.map(doc => doc.data());
                 const totalAppointments = appointmentsData.length;
                 const confirmedAppointments = appointmentsData.filter(app => app.status === 'confirmé').length;
@@ -194,24 +192,31 @@ const Dashboard = ({ db, appId }) => {
 const DevisList = ({ db, appId }) => {
     const [quotes, setQuotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null); // NOUVEAU: State pour gérer les erreurs
 
     useEffect(() => {
-        if (!db || !appId) return;
+        if (!db || !appId) {
+            setIsLoading(false);
+            return;
+        }
         const quotesPath = `/artifacts/${appId}/public/data/devis`;
         const q = query(collection(db, quotesPath));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const quotesList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             quotesList.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
             setQuotes(quotesList);
+            setError(null);
             setIsLoading(false);
-        }, (error) => {
-            console.error("Erreur de lecture des devis:", error);
+        }, (err) => { // CORRIGÉ: Ajout de la gestion d'erreur
+            console.error("Erreur de lecture des devis:", err);
+            setError("Impossible de charger les devis. Vérifiez les permissions Firestore.");
             setIsLoading(false);
         });
         return () => unsubscribe();
     }, [db, appId]);
 
     if (isLoading) return <p className="text-center text-gray-500">Chargement des devis...</p>;
+    if (error) return <p className="text-center text-red-500">{error}</p>;
     if (quotes.length === 0) return <p className="text-center text-gray-500">Aucun devis réalisé pour le moment.</p>;
 
     return (
@@ -258,18 +263,24 @@ const AppointmentListBO = ({ db, appId }) => {
     const [appointments, setAppointments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
+    const [error, setError] = useState(null); // NOUVEAU: State pour gérer les erreurs
 
     useEffect(() => {
-        if (!db || !appId) return;
+        if (!db || !appId) {
+            setIsLoading(false);
+            return;
+        }
         const appointmentsPath = `/artifacts/${appId}/public/data/appointments`;
         const q = query(collection(db, appointmentsPath));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
             setAppointments(list);
+            setError(null);
             setIsLoading(false);
-        }, (error) => {
-            console.error("Erreur de lecture des RDV:", error);
+        }, (err) => { // CORRIGÉ: Ajout de la gestion d'erreur
+            console.error("Erreur de lecture des RDV:", err);
+            setError("Impossible de charger les rendez-vous. Vérifiez les permissions Firestore.");
             setIsLoading(false);
         });
         return () => unsubscribe();
@@ -310,6 +321,7 @@ const AppointmentListBO = ({ db, appId }) => {
 
 
     if (isLoading) return <p className="text-center text-gray-500">Chargement des rendez-vous...</p>;
+    if (error) return <p className="text-center text-red-500">{error}</p>;
 
     return (
         <div>
@@ -355,21 +367,23 @@ const SalespersonsManager = ({ db, appId }) => {
     const [salespersons, setSalespersons] = useState([]);
     const [newSalesperson, setNewSalesperson] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    // NOUVEAU: State pour le modal de confirmation
     const [deletingId, setDeletingId] = useState(null);
 
     const salespersonsPath = useMemo(() => `/artifacts/${appId}/public/data/salespersons`, [appId]);
 
     useEffect(() => {
-        if (!db || !appId) return;
+        if (!db || !appId) {
+             setIsLoading(false);
+             return;
+        }
         const q = query(collection(db, salespersonsPath));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setSalespersons(list);
             setIsLoading(false);
-        }, (error) => { // AJOUT : Gestion des erreurs
+        }, (error) => {
             console.error("Erreur de lecture des commerciaux:", error);
-            setIsLoading(false); // Stoppe le chargement même en cas d'erreur
+            setIsLoading(false);
         });
         return () => unsubscribe();
     }, [db, appId, salespersonsPath]);
@@ -382,7 +396,6 @@ const SalespersonsManager = ({ db, appId }) => {
             await addDoc(collection(db, salespersonsPath), { name: newSalesperson.trim(), createdAt: serverTimestamp() });
             setNewSalesperson('');
         } else {
-            // AMÉLIORATION: On pourrait afficher une erreur à l'utilisateur ici
             console.error("Ce commercial existe déjà.");
         }
     };
@@ -390,7 +403,7 @@ const SalespersonsManager = ({ db, appId }) => {
     const confirmDelete = async () => {
         if (!deletingId) return;
         await deleteDoc(doc(db, salespersonsPath, deletingId));
-        setDeletingId(null); // Ferme le modal
+        setDeletingId(null);
     };
 
     if (isLoading) return <p className="text-center text-gray-500">Chargement...</p>;
@@ -418,7 +431,6 @@ const SalespersonsManager = ({ db, appId }) => {
                 {salespersons.map(sp => (
                     <div key={sp.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
                         <span>{sp.name}</span>
-                        {/* AMÉLIORATION: Ouvre le modal de confirmation au lieu de supprimer directement */}
                         <button onClick={() => setDeletingId(sp.id)} className="text-red-500 hover:text-red-700">
                             <TrashIcon />
                         </button>
@@ -439,15 +451,18 @@ const PresentationManager = ({ db, appId }) => {
     const videosPath = useMemo(() => `/artifacts/${appId}/public/data/presentationVideos`, [appId]);
 
     useEffect(() => {
-        if (!db || !appId) return;
+        if (!db || !appId) {
+            setIsLoading(false);
+            return;
+        }
         const q = query(collection(db, videosPath));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setVideos(list);
             setIsLoading(false);
-        }, (error) => { // AJOUT : Gestion des erreurs
+        }, (error) => {
             console.error("Erreur de lecture des vidéos:", error);
-            setIsLoading(false); // Stoppe le chargement même en cas d'erreur
+            setIsLoading(false);
         });
         return () => unsubscribe();
     }, [db, appId, videosPath]);
@@ -518,7 +533,7 @@ const PresentationManager = ({ db, appId }) => {
 
 export default function App() {
   const [config, setConfig] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard'); // NOUVEAU: Le dashboard est la page par défaut
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState('');
   
@@ -526,14 +541,12 @@ export default function App() {
   const configDocRef = useRef(null);
   const appIdRef = useRef(null);
 
-  // AMÉLIORATION SÉCURITÉ: Utilisation des variables globales pour la configuration Firebase
   useEffect(() => {
     const initFirebase = async () => {
         try {
             if (typeof __firebase_config === 'undefined' || typeof __app_id === 'undefined') {
                 console.error("Firebase config non disponible. Utilisation de la configuration par défaut.");
                 setConfig(initialData);
-                // On simule une connexion pour que l'interface reste utilisable en mode dégradé
                 dbRef.current = null;
                 appIdRef.current = 'default-app-id';
                 return;
@@ -574,7 +587,7 @@ export default function App() {
             }
         } catch (error) {
             console.error(error);
-            setConfig(initialData); // Fallback en cas d'erreur
+            setConfig(initialData);
         } finally {
             setIsLoading(false);
         }
@@ -586,7 +599,7 @@ export default function App() {
     if (!configDocRef.current || !config) return;
     setNotification('Sauvegarde en cours...');
     try {
-        await setDoc(configDocRef.current, config, { merge: true }); // Utiliser merge:true pour plus de sécurité
+        await setDoc(configDocRef.current, config, { merge: true });
         setNotification('Configuration sauvegardée avec succès !');
     } catch (error) {
         setNotification('Erreur lors de la sauvegarde.');
@@ -776,8 +789,6 @@ export default function App() {
     }
   }
 
-  // AMÉLIORATION: La navigation a été revue pour utiliser une barre latérale (sidebar),
-  // plus adaptée pour un back-office qui pourrait grandir.
   const TabButton = ({ tabName, label, icon }) => (
     <button onClick={() => setActiveTab(tabName)} className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md font-semibold transition text-sm ${activeTab === tabName ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'}`}>
         {icon}
@@ -829,6 +840,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 // Importations Firebase
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, setLogLevel, onSnapshot, addDoc, deleteDoc, where } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, setLogLevel, onSnapshot, addDoc, deleteDoc, where, serverTimestamp } from 'firebase/firestore';
 
 // --- Icônes SVG pour l'interface ---
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
@@ -16,7 +16,9 @@ const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
 const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>;
-
+// NOUVEAU: Ajout d'icônes pour le Dashboard
+const BarChartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
+const AlertTriangleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
 
 // --- Données par défaut ---
 const initialData = {
@@ -35,6 +37,42 @@ const initialData = {
 };
 
 // --- Composants du Back-Office ---
+
+// NOUVEAU: Modal de confirmation pour les actions destructives (suppression)
+const ConfirmationModal = ({ title, message, onConfirm, onCancel }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <AlertTriangleIcon className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">{title}</h3>
+                    <div className="mt-2">
+                        <p className="text-sm text-gray-500">{message}</p>
+                    </div>
+                </div>
+            </div>
+            <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                    type="button"
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={onConfirm}
+                >
+                    Confirmer
+                </button>
+                <button
+                    type="button"
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm"
+                    onClick={onCancel}
+                >
+                    Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
 
 const SectionCard = ({ title, children }) => (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
@@ -84,6 +122,73 @@ const DifferentiatedProductInputs = ({ name, data, onChange }) => (
         </div>
     </div>
 );
+
+// NOUVEAU: Dashboard pour avoir une vue d'ensemble de l'activité commerciale
+const Dashboard = ({ db, appId }) => {
+    const [stats, setStats] = useState({ totalQuotes: 0, totalRevenue: 0, totalAppointments: 0, confirmedAppointments: 0 });
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!db || !appId) return;
+
+        const fetchAllData = async () => {
+            try {
+                const quotesPath = `/artifacts/${appId}/public/data/devis`;
+                const appointmentsPath = `/artifacts/${appId}/public/data/appointments`;
+
+                const quotesQuery = query(collection(db, quotesPath));
+                const appointmentsQuery = query(collection(db, appointmentsPath));
+
+                const [quotesSnapshot, appointmentsSnapshot] = await Promise.all([
+                    getDocs(quotesQuery),
+                    getDocs(appointmentsQuery)
+                ]);
+
+                // Calculs pour les devis
+                const quotesData = quotesSnapshot.docs.map(doc => doc.data());
+                const totalQuotes = quotesData.length;
+                const totalRevenue = quotesData.reduce((sum, quote) => sum + (quote.calculation?.oneTimeTotal || 0), 0);
+
+                // Calculs pour les rendez-vous
+                const appointmentsData = appointmentsSnapshot.docs.map(doc => doc.data());
+                const totalAppointments = appointmentsData.length;
+                const confirmedAppointments = appointmentsData.filter(app => app.status === 'confirmé').length;
+
+                setStats({ totalQuotes, totalRevenue, totalAppointments, confirmedAppointments });
+            } catch (error) {
+                console.error("Erreur lors du calcul des statistiques:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAllData();
+    }, [db, appId]);
+
+    if (isLoading) return <p>Chargement des données du tableau de bord...</p>;
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-sm font-medium text-gray-500">Total des Devis</h3>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalQuotes}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-sm font-medium text-gray-500">Chiffre d'Affaires Potentiel</h3>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalRevenue.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-sm font-medium text-gray-500">Rendez-vous créés</h3>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalAppointments}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-sm font-medium text-gray-500">Rendez-vous confirmés</h3>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{stats.confirmedAppointments}</p>
+            </div>
+        </div>
+    );
+};
+
 
 const DevisList = ({ db, appId }) => {
     const [quotes, setQuotes] = useState([]);
@@ -249,6 +354,8 @@ const SalespersonsManager = ({ db, appId }) => {
     const [salespersons, setSalespersons] = useState([]);
     const [newSalesperson, setNewSalesperson] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    // NOUVEAU: State pour le modal de confirmation
+    const [deletingId, setDeletingId] = useState(null);
 
     const salespersonsPath = `/artifacts/${appId}/public/data/salespersons`;
 
@@ -268,21 +375,32 @@ const SalespersonsManager = ({ db, appId }) => {
         const q = query(collection(db, salespersonsPath), where("name", "==", newSalesperson.trim()));
         const existing = await getDocs(q);
         if (existing.empty) {
-            await addDoc(collection(db, salespersonsPath), { name: newSalesperson.trim() });
+            await addDoc(collection(db, salespersonsPath), { name: newSalesperson.trim(), createdAt: serverTimestamp() });
             setNewSalesperson('');
         } else {
+            // AMÉLIORATION: On pourrait afficher une erreur à l'utilisateur ici
             console.error("Ce commercial existe déjà.");
         }
     };
 
-    const handleDelete = async (id) => {
-        await deleteDoc(doc(db, salespersonsPath, id));
+    const confirmDelete = async () => {
+        if (!deletingId) return;
+        await deleteDoc(doc(db, salespersonsPath, deletingId));
+        setDeletingId(null); // Ferme le modal
     };
 
     if (isLoading) return <p className="text-center text-gray-500">Chargement...</p>;
 
     return (
         <div className="space-y-4">
+            {deletingId && (
+                <ConfirmationModal 
+                    title="Supprimer le commercial ?"
+                    message="Cette action est irréversible. Voulez-vous vraiment continuer ?"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setDeletingId(null)}
+                />
+            )}
             <div className="flex gap-2">
                 <input
                     value={newSalesperson}
@@ -296,7 +414,8 @@ const SalespersonsManager = ({ db, appId }) => {
                 {salespersons.map(sp => (
                     <div key={sp.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
                         <span>{sp.name}</span>
-                        <button onClick={() => handleDelete(sp.id)} className="text-red-500 hover:text-red-700">
+                        {/* AMÉLIORATION: Ouvre le modal de confirmation au lieu de supprimer directement */}
+                        <button onClick={() => setDeletingId(sp.id)} className="text-red-500 hover:text-red-700">
                             <TrashIcon />
                         </button>
                     </div>
@@ -311,6 +430,7 @@ const PresentationManager = ({ db, appId }) => {
     const [newVideoTitle, setNewVideoTitle] = useState('');
     const [newVideoUrl, setNewVideoUrl] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState(null);
 
     const videosPath = `/artifacts/${appId}/public/data/presentationVideos`;
 
@@ -331,21 +451,31 @@ const PresentationManager = ({ db, appId }) => {
         setNewVideoTitle('');
         setNewVideoUrl('');
     };
-
-    const handleDelete = async (id) => {
-        await deleteDoc(doc(db, videosPath, id));
+    
+    const confirmDelete = async () => {
+        if (!deletingId) return;
+        await deleteDoc(doc(db, videosPath, deletingId));
+        setDeletingId(null);
     };
 
     if (isLoading) return <p className="text-center text-gray-500">Chargement des vidéos...</p>;
 
     return (
         <div className="space-y-4">
+             {deletingId && (
+                <ConfirmationModal 
+                    title="Supprimer la vidéo ?"
+                    message="Êtes-vous sûr de vouloir retirer cette vidéo de la présentation ?"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setDeletingId(null)}
+                />
+            )}
              <div className="p-4 border-l-4 border-blue-500 bg-blue-50 text-blue-800">
                 <p className="font-bold">Comment ajouter une vidéo Google Drive ?</p>
                 <p className="text-sm">1. Dans Google Drive, ouvrez la vidéo et cliquez sur "Partager".</p>
                 <p className="text-sm">2. Assurez-vous que l'accès est réglé sur "Tous les utilisateurs disposant du lien".</p>
                 <p className="text-sm">3. Copiez le lien et collez-le ci-dessous.</p>
-            </div>
+             </div>
             <div className="flex flex-col sm:flex-row gap-2">
                 <input
                     value={newVideoTitle}
@@ -368,7 +498,7 @@ const PresentationManager = ({ db, appId }) => {
                             <p className="font-semibold">{video.title}</p>
                             <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all">{video.url}</a>
                         </div>
-                        <button onClick={() => handleDelete(video.id)} className="text-red-500 hover:text-red-700 ml-4">
+                        <button onClick={() => setDeletingId(video.id)} className="text-red-500 hover:text-red-700 ml-4">
                             <TrashIcon />
                         </button>
                     </div>
@@ -381,7 +511,7 @@ const PresentationManager = ({ db, appId }) => {
 
 export default function App() {
   const [config, setConfig] = useState(null);
-  const [activeTab, setActiveTab] = useState('devis');
+  const [activeTab, setActiveTab] = useState('dashboard'); // NOUVEAU: Le dashboard est la page par défaut
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState('');
   
@@ -389,17 +519,21 @@ export default function App() {
   const configDocRef = useRef(null);
   const appIdRef = useRef(null);
 
+  // AMÉLIORATION SÉCURITÉ: Utilisation des variables globales pour la configuration Firebase
   useEffect(() => {
     const initFirebase = async () => {
         try {
             if (typeof __firebase_config === 'undefined' || typeof __app_id === 'undefined') {
-                 console.error("Firebase config is not available.");
-                 setConfig(initialData);
-                 return;
+                console.error("Firebase config non disponible. Utilisation de la configuration par défaut.");
+                setConfig(initialData);
+                // On simule une connexion pour que l'interface reste utilisable en mode dégradé
+                dbRef.current = null;
+                appIdRef.current = 'default-app-id';
+                return;
             }
 
             const firebaseConfig = JSON.parse(__firebase_config);
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const appId = __app_id;
             appIdRef.current = appId;
 
             const app = initializeApp(firebaseConfig);
@@ -419,10 +553,9 @@ export default function App() {
             const docSnap = await getDoc(configDocRef.current);
 
             if (docSnap.exists()) {
-                 const remoteData = docSnap.data();
+                const remoteData = docSnap.data();
                 const mergedConfig = {
-                    ...initialData,
-                    ...remoteData,
+                    ...initialData, ...remoteData,
                     settings: { ...initialData.settings, ...remoteData.settings },
                     offers: { ...initialData.offers, ...remoteData.offers },
                     packs: { ...initialData.packs, ...remoteData.packs },
@@ -434,7 +567,7 @@ export default function App() {
             }
         } catch (error) {
             console.error(error);
-            setConfig(initialData);
+            setConfig(initialData); // Fallback en cas d'erreur
         } finally {
             setIsLoading(false);
         }
@@ -446,7 +579,7 @@ export default function App() {
     if (!configDocRef.current || !config) return;
     setNotification('Sauvegarde en cours...');
     try {
-        await setDoc(configDocRef.current, config);
+        await setDoc(configDocRef.current, config, { merge: true }); // Utiliser merge:true pour plus de sécurité
         setNotification('Configuration sauvegardée avec succès !');
     } catch (error) {
         setNotification('Erreur lors de la sauvegarde.');
@@ -526,6 +659,8 @@ export default function App() {
 
   const renderContent = () => {
     switch(activeTab) {
+        case 'dashboard':
+            return <SectionCard title="Tableau de Bord"><Dashboard db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
         case 'devis':
             return <SectionCard title="Devis Réalisés"><DevisList db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
         case 'appointments':
@@ -634,46 +769,57 @@ export default function App() {
     }
   }
 
+  // AMÉLIORATION: La navigation a été revue pour utiliser une barre latérale (sidebar),
+  // plus adaptée pour un back-office qui pourrait grandir.
   const TabButton = ({ tabName, label, icon }) => (
-    <button onClick={() => setActiveTab(tabName)} className={`flex items-center justify-center md:justify-start gap-3 px-4 py-2 rounded-md font-semibold transition flex-1 md:flex-none ${activeTab === tabName ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200'}`}>
+    <button onClick={() => setActiveTab(tabName)} className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md font-semibold transition text-sm ${activeTab === tabName ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'}`}>
         {icon}
-        <span className="hidden md:inline">{label}</span>
+        <span>{label}</span>
     </button>
   )
 
   return (
     <div className="bg-gray-100 min-h-screen font-sans">
-        <header className="bg-white shadow-md sticky top-0 z-10">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <header className="bg-white shadow-md sticky top-0 z-20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Back-Office</h1>
                 <button onClick={handleSave} className="flex items-center gap-2 bg-blue-600 text-white font-bold py-2 px-3 sm:px-4 rounded-lg hover:bg-blue-700 transition shadow text-sm sm:text-base">
-                    <SaveIcon /> <span className="hidden sm:inline">Sauvegarder</span>
+                    <SaveIcon /> <span className="hidden sm:inline">Sauvegarder les changements</span>
                 </button>
             </div>
         </header>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+                <aside className="lg:col-span-3 xl:col-span-2 mb-6 lg:mb-0">
+                    <nav className="space-y-2">
+                        <TabButton tabName="dashboard" label="Tableau de bord" icon={<BarChartIcon />} />
+                        <hr/>
+                        <TabButton tabName="devis" label="Devis" icon={<ArchiveIcon />} />
+                        <TabButton tabName="appointments" label="Rendez-vous" icon={<CalendarIcon />} />
+                        <TabButton tabName="salespersons" label="Commerciaux" icon={<UsersIcon />} />
+                        <TabButton tabName="presentation" label="Présentation" icon={<VideoIcon />} />
+                        <hr/>
+                        <TabButton tabName="products" label="Offres & Packs" icon={<TagIcon />} />
+                        <TabButton tabName="items" label="Éléments" icon={<ListIcon />} />
+                        <TabButton tabName="discounts" label="Réductions" icon={<TagIcon />} />
+                        <hr/>
+                        <TabButton tabName="settings" label="Paramètres" icon={<SettingsIcon />} />
+                    </nav>
+                </aside>
 
-        <main className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
-            <div className="mb-6 p-1 sm:p-2 bg-gray-200 rounded-lg flex flex-wrap gap-1 sm:gap-2">
-                <TabButton tabName="devis" label="Devis" icon={<ArchiveIcon />} />
-                <TabButton tabName="appointments" label="Rendez-vous" icon={<CalendarIcon />} />
-                <TabButton tabName="salespersons" label="Commerciaux" icon={<UsersIcon />} />
-                <TabButton tabName="presentation" label="Présentation" icon={<VideoIcon />} />
-                <TabButton tabName="products" label="Offres & Packs" icon={<TagIcon />} />
-                <TabButton tabName="items" label="Éléments" icon={<ListIcon />} />
-                <TabButton tabName="discounts" label="Réductions" icon={<TagIcon />} />
-                <TabButton tabName="settings" label="Paramètres" icon={<SettingsIcon />} />
+                <main className="lg:col-span-9 xl:col-span-10">
+                    {renderContent()}
+                </main>
             </div>
-
-            <div>
-                {renderContent()}
-            </div>
-        </main>
+        </div>
         
         {notification && (
-            <div className="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-5 rounded-lg shadow-lg animate-pulse z-20">
+            <div className="fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-5 rounded-lg shadow-lg z-30">
                 {notification}
             </div>
         )}
     </div>
   );
 }
+

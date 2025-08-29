@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 // Importations Firebase
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getAuth, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, setLogLevel, onSnapshot, addDoc, deleteDoc, where } from 'firebase/firestore';
 
 // --- Icônes SVG pour l'interface ---
@@ -197,7 +197,6 @@ const AppointmentListBO = ({ db, appId }) => {
             window.XLSX.writeFile(workbook, "Export_Rendez-vous.xlsx");
         } catch (error) {
             console.error("Erreur lors de l'export Excel:", error);
-            alert("Une erreur est survenue pendant l'exportation.");
         } finally {
             setIsExporting(false);
         }
@@ -262,7 +261,7 @@ const SalespersonsManager = ({ db, appId }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [db, appId, salespersonsPath]);
+    }, [db, appId]);
 
     const handleAdd = async () => {
         if (newSalesperson.trim() === '') return;
@@ -272,7 +271,7 @@ const SalespersonsManager = ({ db, appId }) => {
             await addDoc(collection(db, salespersonsPath), { name: newSalesperson.trim() });
             setNewSalesperson('');
         } else {
-            alert("Ce commercial existe déjà.");
+            console.error("Ce commercial existe déjà.");
         }
     };
 
@@ -324,7 +323,7 @@ const PresentationManager = ({ db, appId }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [db, appId, videosPath]);
+    }, [db, appId]);
 
     const handleAdd = async () => {
         if (newVideoTitle.trim() === '' || newVideoUrl.trim() === '') return;
@@ -393,17 +392,14 @@ export default function App() {
   useEffect(() => {
     const initFirebase = async () => {
         try {
-            const firebaseConfig = {
-              apiKey: "AIzaSyC19fhi-zWc-zlgZgjcQ7du2pK7CaywyO0",
-              authDomain: "application-devis-f2a31.firebaseapp.com",
-              projectId: "application-devis-f2a31",
-              storageBucket: "application-devis-f2a31.appspot.com",
-              messagingSenderId: "960846329322",
-              appId: "1:960846329322:web:5802132e187aa131906e93",
-              measurementId: "G-1F9T98PGS9"
-            };
-            
-            const appId = firebaseConfig.appId;
+            if (typeof __firebase_config === 'undefined' || typeof __app_id === 'undefined') {
+                 console.error("Firebase config is not available.");
+                 setConfig(initialData);
+                 return;
+            }
+
+            const firebaseConfig = JSON.parse(__firebase_config);
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             appIdRef.current = appId;
 
             const app = initializeApp(firebaseConfig);
@@ -411,15 +407,28 @@ export default function App() {
             const auth = getAuth(app);
             dbRef.current = db;
             setLogLevel('debug');
-
-            await signInAnonymously(auth);
+            
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
 
             const docPath = `/artifacts/${appId}/public/data/config/main`;
             configDocRef.current = doc(db, docPath);
             const docSnap = await getDoc(configDocRef.current);
 
-            if (docSnap.exists()) setConfig(docSnap.data());
-            else {
+            if (docSnap.exists()) {
+                 const remoteData = docSnap.data();
+                const mergedConfig = {
+                    ...initialData,
+                    ...remoteData,
+                    settings: { ...initialData.settings, ...remoteData.settings },
+                    offers: { ...initialData.offers, ...remoteData.offers },
+                    packs: { ...initialData.packs, ...remoteData.packs },
+                };
+                setConfig(mergedConfig);
+            } else {
                 await setDoc(configDocRef.current, initialData);
                 setConfig(initialData);
             }

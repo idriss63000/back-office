@@ -1,5 +1,5 @@
 /* global __firebase_config, __app_id, __initial_auth_token */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 // Importations Firebase
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -358,7 +358,7 @@ const SalespersonsManager = ({ db, appId }) => {
     // NOUVEAU: State pour le modal de confirmation
     const [deletingId, setDeletingId] = useState(null);
 
-    const salespersonsPath = `/artifacts/${appId}/public/data/salespersons`;
+    const salespersonsPath = useMemo(() => `/artifacts/${appId}/public/data/salespersons`, [appId]);
 
     useEffect(() => {
         if (!db || !appId) return;
@@ -367,9 +367,12 @@ const SalespersonsManager = ({ db, appId }) => {
             const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setSalespersons(list);
             setIsLoading(false);
+        }, (error) => { // AJOUT : Gestion des erreurs
+            console.error("Erreur de lecture des commerciaux:", error);
+            setIsLoading(false); // Stoppe le chargement même en cas d'erreur
         });
         return () => unsubscribe();
-    }, [db, appId]);
+    }, [db, appId, salespersonsPath]);
 
     const handleAdd = async () => {
         if (newSalesperson.trim() === '') return;
@@ -433,7 +436,7 @@ const PresentationManager = ({ db, appId }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState(null);
 
-    const videosPath = `/artifacts/${appId}/public/data/presentationVideos`;
+    const videosPath = useMemo(() => `/artifacts/${appId}/public/data/presentationVideos`, [appId]);
 
     useEffect(() => {
         if (!db || !appId) return;
@@ -442,9 +445,12 @@ const PresentationManager = ({ db, appId }) => {
             const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setVideos(list);
             setIsLoading(false);
+        }, (error) => { // AJOUT : Gestion des erreurs
+            console.error("Erreur de lecture des vidéos:", error);
+            setIsLoading(false); // Stoppe le chargement même en cas d'erreur
         });
         return () => unsubscribe();
-    }, [db, appId]);
+    }, [db, appId, videosPath]);
 
     const handleAdd = async () => {
         if (newVideoTitle.trim() === '' || newVideoUrl.trim() === '') return;
@@ -823,6 +829,8 @@ export default function App() {
     </div>
   );
 }
+
+
 
 
 

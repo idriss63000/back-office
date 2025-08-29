@@ -557,15 +557,18 @@ export default function App() {
   useEffect(() => {
     const initFirebase = async () => {
         try {
-            // CORRIGÉ: Rétablissement de la logique pour utiliser les variables d'environnement
-            if (typeof __firebase_config === 'undefined' || typeof __app_id === 'undefined') {
-                console.error("Firebase config non disponible. L'application ne pourra pas se connecter à la base de données.");
-                setConfig(initialData);
-                return;
-            }
+            // CORRIGÉ: Utilisation de la configuration Firebase directement dans le code pour la compatibilité Vercel
+            // NOTE: Pour une meilleure sécurité en production, utilisez les variables d'environnement Vercel.
+            const firebaseConfig = {
+                apiKey: "AIzaSyC19fhi-zWc-zlgZgjcQ7du2pK7CaywyO0",
+                authDomain: "application-devis-f2a31.firebaseapp.com",
+                projectId: "application-devis-f2a31",
+                storageBucket: "application-devis-f2a31.appspot.com",
+                messagingSenderId: "960846329322",
+                appId: "1:960846329322:web:5802132e187aa131906e93"
+            };
 
-            const firebaseConfig = JSON.parse(__firebase_config);
-            const appId = __app_id;
+            const appId = firebaseConfig.appId;
             appIdRef.current = appId;
 
             const app = initializeApp(firebaseConfig);
@@ -574,11 +577,8 @@ export default function App() {
             dbRef.current = db;
             setLogLevel('debug');
             
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
+            // La connexion anonyme est suffisante pour le back-office sur Vercel
+            await signInAnonymously(auth);
 
             const docPath = `/artifacts/${appId}/public/data/config/main`;
             configDocRef.current = doc(db, docPath);
@@ -857,6 +857,8 @@ export default function App() {
     </div>
   );
 }
+
+
 
 
 

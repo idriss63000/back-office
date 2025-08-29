@@ -15,6 +15,7 @@ const ArchiveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" hei
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>;
 
 
 // --- Données par défaut ---
@@ -306,6 +307,78 @@ const SalespersonsManager = ({ db, appId }) => {
     );
 };
 
+const PresentationManager = ({ db, appId }) => {
+    const [videos, setVideos] = useState([]);
+    const [newVideoTitle, setNewVideoTitle] = useState('');
+    const [newVideoUrl, setNewVideoUrl] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+
+    const videosPath = `/artifacts/${appId}/public/data/presentationVideos`;
+
+    useEffect(() => {
+        if (!db || !appId) return;
+        const q = query(collection(db, videosPath));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setVideos(list);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, [db, appId, videosPath]);
+
+    const handleAdd = async () => {
+        if (newVideoTitle.trim() === '' || newVideoUrl.trim() === '') return;
+        await addDoc(collection(db, videosPath), { title: newVideoTitle.trim(), url: newVideoUrl.trim() });
+        setNewVideoTitle('');
+        setNewVideoUrl('');
+    };
+
+    const handleDelete = async (id) => {
+        await deleteDoc(doc(db, videosPath, id));
+    };
+
+    if (isLoading) return <p className="text-center text-gray-500">Chargement des vidéos...</p>;
+
+    return (
+        <div className="space-y-4">
+             <div className="p-4 border-l-4 border-blue-500 bg-blue-50 text-blue-800">
+                <p className="font-bold">Comment ajouter une vidéo Google Drive ?</p>
+                <p className="text-sm">1. Dans Google Drive, ouvrez la vidéo et cliquez sur "Partager".</p>
+                <p className="text-sm">2. Assurez-vous que l'accès est réglé sur "Tous les utilisateurs disposant du lien".</p>
+                <p className="text-sm">3. Copiez le lien et collez-le ci-dessous.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                    value={newVideoTitle}
+                    onChange={(e) => setNewVideoTitle(e.target.value)}
+                    placeholder="Titre de la vidéo"
+                    className="p-2 border rounded-md w-full sm:w-1/3"
+                />
+                 <input
+                    value={newVideoUrl}
+                    onChange={(e) => setNewVideoUrl(e.target.value)}
+                    placeholder="URL de la vidéo Google Drive"
+                    className="p-2 border rounded-md w-full"
+                />
+                <button onClick={handleAdd} className="bg-blue-600 text-white px-4 rounded-md font-semibold">Ajouter</button>
+            </div>
+            <div className="space-y-2">
+                {videos.map(video => (
+                    <div key={video.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                        <div>
+                            <p className="font-semibold">{video.title}</p>
+                            <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all">{video.url}</a>
+                        </div>
+                        <button onClick={() => handleDelete(video.id)} className="text-red-500 hover:text-red-700 ml-4">
+                            <TrashIcon />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 export default function App() {
   const [config, setConfig] = useState(null);
@@ -450,6 +523,8 @@ export default function App() {
             return <SectionCard title="Rendez-vous"><AppointmentListBO db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
         case 'salespersons':
             return <SectionCard title="Commerciaux"><SalespersonsManager db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
+        case 'presentation':
+            return <SectionCard title="Gérer les Vidéos de Présentation"><PresentationManager db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
         case 'products':
             return (
                 <>
@@ -573,6 +648,7 @@ export default function App() {
                 <TabButton tabName="devis" label="Devis" icon={<ArchiveIcon />} />
                 <TabButton tabName="appointments" label="Rendez-vous" icon={<CalendarIcon />} />
                 <TabButton tabName="salespersons" label="Commerciaux" icon={<UsersIcon />} />
+                <TabButton tabName="presentation" label="Présentation" icon={<VideoIcon />} />
                 <TabButton tabName="products" label="Offres & Packs" icon={<TagIcon />} />
                 <TabButton tabName="items" label="Éléments" icon={<ListIcon />} />
                 <TabButton tabName="discounts" label="Réductions" icon={<TagIcon />} />

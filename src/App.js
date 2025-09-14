@@ -19,6 +19,7 @@ const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" he
 const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>;
 const BarChartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>;
 const AlertTriangleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
 
 // --- Données par défaut ---
 const initialData = {
@@ -72,6 +73,88 @@ const ConfirmationModal = ({ title, message, onConfirm, onCancel }) => (
     </div>
 );
 
+const ListManager = ({ title, items, onAdd, onRemove }) => {
+    const [newItem, setNewItem] = useState('');
+
+    const handleAdd = () => {
+        if (newItem.trim()) {
+            onAdd(newItem.trim());
+            setNewItem('');
+        }
+    };
+
+    return (
+        <div className="p-4 border rounded-lg bg-gray-50">
+            <h3 className="font-semibold text-gray-900 text-lg mb-3">{title}</h3>
+            <div className="flex gap-2 mb-3">
+                <input
+                    value={newItem}
+                    onChange={(e) => setNewItem(e.target.value)}
+                    placeholder={`Ajouter un élément...`}
+                    className="p-2 border rounded-md w-full"
+                />
+                <button onClick={handleAdd} className="bg-blue-600 text-white px-4 rounded-md font-semibold">Ajouter</button>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+                {items && items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 bg-white rounded-md border">
+                        <span>{item}</span>
+                        <button onClick={() => onRemove(index)} className="text-red-500 hover:text-red-700">
+                            <TrashIcon />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const ReportConfigManager = ({ reportConfig, setReportConfig }) => {
+    
+    const handleListChange = (listName, action, value, index = null) => {
+        setReportConfig(prev => {
+            const currentList = prev[listName] || [];
+            let newList;
+            if (action === 'add') {
+                newList = [...currentList, value];
+            } else { // remove
+                newList = currentList.filter((_, i) => i !== index);
+            }
+            return { ...prev, [listName]: newList };
+        });
+    };
+
+    if (!reportConfig) return <p>Chargement de la configuration des rapports...</p>;
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ListManager 
+                title="Nuisibles Ciblés"
+                items={reportConfig.nuisibles}
+                onAdd={(item) => handleListChange('nuisibles', 'add', item)}
+                onRemove={(index) => handleListChange('nuisibles', 'remove', null, index)}
+            />
+            <ListManager 
+                title="Zones Inspectées"
+                items={reportConfig.zones}
+                onAdd={(item) => handleListChange('zones', 'add', item)}
+                onRemove={(index) => handleListChange('zones', 'remove', null, index)}
+            />
+            <ListManager 
+                title="Actions Menées (Checklist)"
+                items={reportConfig.actions}
+                onAdd={(item) => handleListChange('actions', 'add', item)}
+                onRemove={(index) => handleListChange('actions', 'remove', null, index)}
+            />
+             <ListManager 
+                title="Produits Utilisés"
+                items={reportConfig.produits}
+                onAdd={(item) => handleListChange('produits', 'add', item)}
+                onRemove={(index) => handleListChange('produits', 'remove', null, index)}
+            />
+        </div>
+    );
+};
 
 const SectionCard = ({ title, children }) => (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
@@ -506,10 +589,10 @@ const PresentationManager = ({ db, appId }) => {
                 />
             )}
              <div className="p-4 border-l-4 border-blue-500 bg-blue-50 text-blue-800">
-                <p className="font-bold">Comment ajouter une vidéo Google Drive ?</p>
-                <p className="text-sm">1. Dans Google Drive, ouvrez la vidéo et cliquez sur "Partager".</p>
-                <p className="text-sm">2. Assurez-vous que l'accès est réglé sur "Tous les utilisateurs disposant du lien".</p>
-                <p className="text-sm">3. Copiez le lien et collez-le ci-dessous.</p>
+                 <p className="font-bold">Comment ajouter une vidéo Google Drive ?</p>
+                 <p className="text-sm">1. Dans Google Drive, ouvrez la vidéo et cliquez sur "Partager".</p>
+                 <p className="text-sm">2. Assurez-vous que l'accès est réglé sur "Tous les utilisateurs disposant du lien".</p>
+                 <p className="text-sm">3. Copiez le lien et collez-le ci-dessous.</p>
              </div>
             <div className="flex flex-col sm:flex-row gap-2">
                 <input
@@ -546,12 +629,14 @@ const PresentationManager = ({ db, appId }) => {
 
 export default function App() {
   const [config, setConfig] = useState(null);
+  const [reportConfig, setReportConfig] = useState(null); // NOUVEL ÉTAT
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState('');
   
   const dbRef = useRef(null);
   const configDocRef = useRef(null);
+  const reportConfigDocRef = useRef(null); // NOUVELLE RÉFÉRENCE
   const appIdRef = useRef(null);
 
   useEffect(() => {
@@ -580,6 +665,7 @@ export default function App() {
             // La connexion anonyme est suffisante pour le back-office sur Vercel
             await signInAnonymously(auth);
 
+            // Charger la configuration principale
             const docPath = `/artifacts/${appId}/public/data/config/main`;
             configDocRef.current = doc(db, docPath);
             const docSnap = await getDoc(configDocRef.current);
@@ -597,9 +683,23 @@ export default function App() {
                 await setDoc(configDocRef.current, initialData);
                 setConfig(initialData);
             }
+
+             // NOUVEAU : Charger la configuration des rapports
+            const reportDocPath = `/artifacts/${appId}/public/data/reportConfig/main`;
+            reportConfigDocRef.current = doc(db, reportDocPath);
+            const reportDocSnap = await getDoc(reportConfigDocRef.current);
+            const initialReportConfig = { nuisibles: [], zones: [], actions: [], produits: [] };
+             if (reportDocSnap.exists()) {
+                setReportConfig(reportDocSnap.data());
+            } else {
+                await setDoc(reportConfigDocRef.current, initialReportConfig);
+                setReportConfig(initialReportConfig);
+            }
+
         } catch (error) {
             console.error("Erreur d'initialisation de Firebase:", error);
             setConfig(initialData);
+            setReportConfig({ nuisibles: [], zones: [], actions: [], produits: [] });
         } finally {
             setIsLoading(false);
         }
@@ -608,15 +708,19 @@ export default function App() {
   }, []);
 
   const handleSave = async () => {
-    if (!configDocRef.current || !config) {
+    if (!configDocRef.current || !config || !reportConfigDocRef.current || !reportConfig) {
         setNotification("Erreur: Connexion à la base de données non établie.");
         setTimeout(() => setNotification(''), 3000);
         return;
     }
     setNotification('Sauvegarde en cours...');
     try {
-        await setDoc(configDocRef.current, config, { merge: true });
-        setNotification('Configuration sauvegardée avec succès !');
+         // Sauvegarde des deux configurations en parallèle
+        await Promise.all([
+            setDoc(configDocRef.current, config, { merge: true }),
+            setDoc(reportConfigDocRef.current, reportConfig, { merge: true })
+        ]);
+        setNotification('Configurations sauvegardées avec succès !');
     } catch (error) {
         setNotification('Erreur lors de la sauvegarde.');
         console.error("Erreur de sauvegarde:", error);
@@ -706,6 +810,8 @@ export default function App() {
             return <SectionCard title="Commerciaux"><SalespersonsManager db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
         case 'presentation':
             return <SectionCard title="Gérer les Vidéos de Présentation"><PresentationManager db={dbRef.current} appId={appIdRef.current} /></SectionCard>;
+        case 'reportConfig': 
+             return <SectionCard title="Configuration des Rapports Sanitaires"><ReportConfigManager reportConfig={reportConfig} setReportConfig={setReportConfig} /></SectionCard>;
         case 'products':
             return (
                 <>
@@ -835,6 +941,8 @@ export default function App() {
                         <TabButton tabName="salespersons" label="Commerciaux" icon={<UsersIcon />} />
                         <TabButton tabName="presentation" label="Présentation" icon={<VideoIcon />} />
                         <hr/>
+                        {/* NOUVEL ONGLET CI-DESSOUS */}
+                        <TabButton tabName="reportConfig" label="Config. Rapports" icon={<ClipboardIcon />} />
                         <TabButton tabName="products" label="Offres & Packs" icon={<TagIcon />} />
                         <TabButton tabName="items" label="Éléments" icon={<ListIcon />} />
                         <TabButton tabName="discounts" label="Réductions" icon={<TagIcon />} />
@@ -857,11 +965,4 @@ export default function App() {
     </div>
   );
 }
-
-
-
-
-
-
-
 

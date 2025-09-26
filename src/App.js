@@ -73,7 +73,7 @@ const ConfirmationModal = ({ title, message, onConfirm, onCancel }) => (
     </div>
 );
 
-const ListManager = ({ title, items, onAdd, onRemove }) => {
+const ListManager = ({ title, items, onAdd, onRemove, placeholder = "Ajouter un élément..." }) => {
     const [newItem, setNewItem] = useState('');
 
     const handleAdd = () => {
@@ -90,7 +90,7 @@ const ListManager = ({ title, items, onAdd, onRemove }) => {
                 <input
                     value={newItem}
                     onChange={(e) => setNewItem(e.target.value)}
-                    placeholder={`Ajouter un élément...`}
+                    placeholder={placeholder}
                     className="p-2 border rounded-md w-full"
                 />
                 <button onClick={handleAdd} className="bg-blue-600 text-white px-4 rounded-md font-semibold">Ajouter</button>
@@ -109,6 +109,9 @@ const ListManager = ({ title, items, onAdd, onRemove }) => {
     );
 };
 
+// =========================================================================================
+// == DÉBUT DE LA SECTION MODIFIÉE : ReportConfigManager (avec gestion des emplacements) ===
+// =========================================================================================
 const ReportConfigManager = ({ reportConfig, setReportConfig }) => {
     
     const handleListChange = (listName, action, value, index = null) => {
@@ -123,38 +126,105 @@ const ReportConfigManager = ({ reportConfig, setReportConfig }) => {
             return { ...prev, [listName]: newList };
         });
     };
+    
+    const handleZoneChange = (action, value, index = null) => {
+        setReportConfig(prev => {
+            const newTrapLocations = { ...(prev.trapLocationOptions || {}) };
+            if (action === 'add') {
+                if (!newTrapLocations[value]) {
+                    newTrapLocations[value] = ['Autre'];
+                }
+            } else {
+                const zones = Object.keys(newTrapLocations);
+                const zoneToRemove = zones[index];
+                if(zoneToRemove) delete newTrapLocations[zoneToRemove];
+            }
+            return { ...prev, trapLocationOptions: newTrapLocations };
+        });
+    };
+
+    const handleEmplacementChange = (zone, action, value, index = null) => {
+        setReportConfig(prev => {
+            const newTrapLocations = { ...prev.trapLocationOptions };
+            const currentEmplacements = newTrapLocations[zone] || [];
+            let newEmplacements;
+            if (action === 'add') {
+                newEmplacements = [...currentEmplacements, value];
+            } else {
+                newEmplacements = currentEmplacements.filter((_, i) => i !== index);
+            }
+            newTrapLocations[zone] = newEmplacements;
+            return { ...prev, trapLocationOptions: newTrapLocations };
+        });
+    };
 
     if (!reportConfig) return <p>Chargement de la configuration des rapports...</p>;
 
+    const zones = Object.keys(reportConfig.trapLocationOptions || {});
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ListManager 
-                title="Nuisibles Ciblés"
-                items={reportConfig.nuisibles}
-                onAdd={(item) => handleListChange('nuisibles', 'add', item)}
-                onRemove={(index) => handleListChange('nuisibles', 'remove', null, index)}
-            />
-            <ListManager 
-                title="Zones Inspectées"
-                items={reportConfig.zones}
-                onAdd={(item) => handleListChange('zones', 'add', item)}
-                onRemove={(index) => handleListChange('zones', 'remove', null, index)}
-            />
-            <ListManager 
-                title="Actions Menées (Checklist)"
-                items={reportConfig.actions}
-                onAdd={(item) => handleListChange('actions', 'add', item)}
-                onRemove={(index) => handleListChange('actions', 'remove', null, index)}
-            />
-             <ListManager 
-                title="Produits Utilisés"
-                items={reportConfig.produits}
-                onAdd={(item) => handleListChange('produits', 'add', item)}
-                onRemove={(index) => handleListChange('produits', 'remove', null, index)}
-            />
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ListManager 
+                    title="Nuisibles Ciblés"
+                    items={reportConfig.nuisibles}
+                    onAdd={(item) => handleListChange('nuisibles', 'add', item)}
+                    onRemove={(index) => handleListChange('nuisibles', 'remove', null, index)}
+                />
+                <ListManager 
+                    title="Zones Générales (pour checklist)"
+                    items={reportConfig.zones}
+                    onAdd={(item) => handleListChange('zones', 'add', item)}
+                    onRemove={(index) => handleListChange('zones', 'remove', null, index)}
+                />
+                <ListManager 
+                    title="Actions Menées (Checklist)"
+                    items={reportConfig.actions}
+                    onAdd={(item) => handleListChange('actions', 'add', item)}
+                    onRemove={(index) => handleListChange('actions', 'remove', null, index)}
+                />
+                 <ListManager 
+                    title="Produits Utilisés"
+                    items={reportConfig.produits}
+                    onAdd={(item) => handleListChange('produits', 'add', item)}
+                    onRemove={(index) => handleListChange('produits', 'remove', null, index)}
+                />
+            </div>
+
+            <div className="p-4 border rounded-lg mt-6">
+                 <h3 className="font-bold text-xl text-gray-800 mb-4">Gestion des Emplacements de Dispositifs</h3>
+                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-1">
+                        <ListManager 
+                            title="1. Zones d'intervention"
+                            items={zones}
+                            placeholder="Ajouter une zone (ex: Cuisine)"
+                            onAdd={(item) => handleZoneChange('add', item)}
+                            onRemove={(index) => handleZoneChange('remove', null, index)}
+                        />
+                    </div>
+                    <div className="lg:col-span-2 space-y-4">
+                        <h3 className="font-semibold text-gray-900 text-lg">2. Emplacements par Zone</h3>
+                        {zones.length > 0 ? zones.map(zone => (
+                             <ListManager 
+                                key={zone}
+                                title={zone}
+                                items={reportConfig.trapLocationOptions[zone]}
+                                placeholder={`Ajouter un emplacement...`}
+                                onAdd={(item) => handleEmplacementChange(zone, 'add', item)}
+                                onRemove={(index) => handleEmplacementChange(zone, 'remove', null, index)}
+                            />
+                        )) : <p className="text-gray-500 text-center p-4">Veuillez d'abord ajouter une zone.</p>}
+                    </div>
+                 </div>
+            </div>
         </div>
     );
 };
+// =========================================================================================
+// == FIN DE LA SECTION MODIFIÉE ===========================================================
+// =========================================================================================
+
 
 const SectionCard = ({ title, children }) => (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
@@ -629,21 +699,19 @@ const PresentationManager = ({ db, appId }) => {
 
 export default function App() {
   const [config, setConfig] = useState(null);
-  const [reportConfig, setReportConfig] = useState(null); // NOUVEL ÉTAT
+  const [reportConfig, setReportConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState('');
   
   const dbRef = useRef(null);
   const configDocRef = useRef(null);
-  const reportConfigDocRef = useRef(null); // NOUVELLE RÉFÉRENCE
+  const reportConfigDocRef = useRef(null);
   const appIdRef = useRef(null);
 
   useEffect(() => {
     const initFirebase = async () => {
         try {
-            // CORRIGÉ: Utilisation de la configuration Firebase directement dans le code pour la compatibilité Vercel
-            // NOTE: Pour une meilleure sécurité en production, utilisez les variables d'environnement Vercel.
             const firebaseConfig = {
                 apiKey: "AIzaSyC19fhi-zWc-zlgZgjcQ7du2pK7CaywyO0",
                 authDomain: "application-devis-f2a31.firebaseapp.com",
@@ -662,7 +730,6 @@ export default function App() {
             dbRef.current = db;
             setLogLevel('debug');
             
-            // La connexion anonyme est suffisante pour le back-office sur Vercel
             await signInAnonymously(auth);
 
             // Charger la configuration principale
@@ -688,9 +755,20 @@ export default function App() {
             const reportDocPath = `/artifacts/${appId}/public/data/reportConfig/main`;
             reportConfigDocRef.current = doc(db, reportDocPath);
             const reportDocSnap = await getDoc(reportConfigDocRef.current);
-            const initialReportConfig = { nuisibles: [], zones: [], actions: [], produits: [] };
+            const initialReportConfig = { 
+                nuisibles: [], 
+                zones: [], 
+                actions: [], 
+                produits: [],
+                trapLocationOptions: {} // Initialiser comme objet vide
+            };
              if (reportDocSnap.exists()) {
-                setReportConfig(reportDocSnap.data());
+                 const remoteReportData = reportDocSnap.data();
+                 // S'assurer que trapLocationOptions est bien un objet
+                 if(!remoteReportData.trapLocationOptions || typeof remoteReportData.trapLocationOptions !== 'object'){
+                    remoteReportData.trapLocationOptions = {};
+                 }
+                setReportConfig(remoteReportData);
             } else {
                 await setDoc(reportConfigDocRef.current, initialReportConfig);
                 setReportConfig(initialReportConfig);
@@ -699,7 +777,7 @@ export default function App() {
         } catch (error) {
             console.error("Erreur d'initialisation de Firebase:", error);
             setConfig(initialData);
-            setReportConfig({ nuisibles: [], zones: [], actions: [], produits: [] });
+            setReportConfig({ nuisibles: [], zones: [], actions: [], produits: [], trapLocationOptions: {} });
         } finally {
             setIsLoading(false);
         }
@@ -715,7 +793,7 @@ export default function App() {
     }
     setNotification('Sauvegarde en cours...');
     try {
-         // Sauvegarde des deux configurations en parallèle
+        // Sauvegarde des deux configurations en parallèle
         await Promise.all([
             setDoc(configDocRef.current, config, { merge: true }),
             setDoc(reportConfigDocRef.current, reportConfig, { merge: true })
@@ -795,7 +873,7 @@ export default function App() {
   };
 
   if (isLoading || !config) {
-      return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><p className="text-gray-600 animate-pulse">Chargement du back-office...</p></div>
+       return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><p className="text-gray-600 animate-pulse">Chargement du back-office...</p></div>
   }
 
   const renderContent = () => {
@@ -965,4 +1043,3 @@ export default function App() {
     </div>
   );
 }
-
